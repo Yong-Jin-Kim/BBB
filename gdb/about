@@ -1,0 +1,26 @@
+mission objective:
+- for pre-existing process execution governed by MLFQ + STRIDE scheduler,
+  make multithreading for each process possible
+
+MLFQ + STRIDE
+- all process runs in MLFQ (Multi-Level Feedback Queue) unless the process is defined as STRIDE process when forked
+
+MLFQ
+- 3 priorities exist level-2(highest), level-1, level-0(lowest)
+- all process start with the highest priority queue (level-2)
+- each process gets its priority degraded whenever it uses all of its time quantum in the given queue
+  TIME QUANTUM : (level-2)  5 ticks
+                 (level-1) 10 ticks
+		 (level-0) 20 ticks
+
+- for every 200 ticks, there is priority boost where all process goes up to level-2
+
+STRIDE
+- Carl Waldspurger's STIRIDE scheduling
+- it ensures certain amount of share ( == % of the total) of the process
+  EX : if a process is set STRIDE = 50%, then at least 50% of the total running time should be assigned to that process
+
+THREAD
+- threads is a unit of execution flow, smaller than process, that share ADDRESS SPACE and CODE
+- since each threads can be of different states, "1 context, 1 trapframe and 1 stack" should be assigned to a thread
+- multithreading is fast because NO NEED TO FLUSH TLB

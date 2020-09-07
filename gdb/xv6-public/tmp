@@ -1,0 +1,1317 @@
+
+proc.o:     file format elf32-i386
+
+
+Disassembly of section .text:
+
+00000000 <allocproc>:
+// If found, change state to EMBRYO and initialize
+// state required to run in the kernel.
+// Otherwise return 0.
+static struct proc*
+allocproc(void)
+{
+   0:	55                   	push   %ebp
+   1:	89 e5                	mov    %esp,%ebp
+   3:	53                   	push   %ebx
+  struct proc *p;
+  char *sp;
+
+  acquire(&ptable.lock);
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+   4:	bb 34 00 00 00       	mov    $0x34,%ebx
+{
+   9:	83 ec 10             	sub    $0x10,%esp
+  acquire(&ptable.lock);
+   c:	68 00 00 00 00       	push   $0x0
+  11:	e8 fc ff ff ff       	call   12 <allocproc+0x12>
+  16:	83 c4 10             	add    $0x10,%esp
+  19:	eb 10                	jmp    2b <allocproc+0x2b>
+  1b:	90                   	nop
+  1c:	8d 74 26 00          	lea    0x0(%esi,%eiz,1),%esi
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  20:	83 c3 7c             	add    $0x7c,%ebx
+  23:	81 fb 34 1f 00 00    	cmp    $0x1f34,%ebx
+  29:	73 75                	jae    a0 <allocproc+0xa0>
+    if(p->state == UNUSED)
+  2b:	8b 43 0c             	mov    0xc(%ebx),%eax
+  2e:	85 c0                	test   %eax,%eax
+  30:	75 ee                	jne    20 <allocproc+0x20>
+  release(&ptable.lock);
+  return 0;
+
+found:
+  p->state = EMBRYO;
+  p->pid = nextpid++;
+  32:	a1 00 00 00 00       	mov    0x0,%eax
+
+  release(&ptable.lock);
+  37:	83 ec 0c             	sub    $0xc,%esp
+  p->state = EMBRYO;
+  3a:	c7 43 0c 01 00 00 00 	movl   $0x1,0xc(%ebx)
+  p->pid = nextpid++;
+  41:	8d 50 01             	lea    0x1(%eax),%edx
+  44:	89 43 10             	mov    %eax,0x10(%ebx)
+  release(&ptable.lock);
+  47:	68 00 00 00 00       	push   $0x0
+  p->pid = nextpid++;
+  4c:	89 15 00 00 00 00    	mov    %edx,0x0
+  release(&ptable.lock);
+  52:	e8 fc ff ff ff       	call   53 <allocproc+0x53>
+
+  // Allocate kernel stack.
+  if((p->kstack = kalloc()) == 0){
+  57:	e8 fc ff ff ff       	call   58 <allocproc+0x58>
+  5c:	83 c4 10             	add    $0x10,%esp
+  5f:	85 c0                	test   %eax,%eax
+  61:	89 43 08             	mov    %eax,0x8(%ebx)
+  64:	74 53                	je     b9 <allocproc+0xb9>
+    return 0;
+  }
+  sp = p->kstack + KSTACKSIZE;
+
+  // Leave room for trap frame.
+  sp -= sizeof *p->tf;
+  66:	8d 90 b4 0f 00 00    	lea    0xfb4(%eax),%edx
+  sp -= 4;
+  *(uint*)sp = (uint)trapret;
+
+  sp -= sizeof *p->context;
+  p->context = (struct context*)sp;
+  memset(p->context, 0, sizeof *p->context);
+  6c:	83 ec 04             	sub    $0x4,%esp
+  sp -= sizeof *p->context;
+  6f:	05 9c 0f 00 00       	add    $0xf9c,%eax
+  sp -= sizeof *p->tf;
+  74:	89 53 18             	mov    %edx,0x18(%ebx)
+  *(uint*)sp = (uint)trapret;
+  77:	c7 40 14 00 00 00 00 	movl   $0x0,0x14(%eax)
+  p->context = (struct context*)sp;
+  7e:	89 43 1c             	mov    %eax,0x1c(%ebx)
+  memset(p->context, 0, sizeof *p->context);
+  81:	6a 14                	push   $0x14
+  83:	6a 00                	push   $0x0
+  85:	50                   	push   %eax
+  86:	e8 fc ff ff ff       	call   87 <allocproc+0x87>
+  p->context->eip = (uint)forkret;
+  8b:	8b 43 1c             	mov    0x1c(%ebx),%eax
+
+  return p;
+  8e:	83 c4 10             	add    $0x10,%esp
+  p->context->eip = (uint)forkret;
+  91:	c7 40 10 00 00 00 00 	movl   $0x0,0x10(%eax)
+}
+  98:	89 d8                	mov    %ebx,%eax
+  9a:	8b 5d fc             	mov    -0x4(%ebp),%ebx
+  9d:	c9                   	leave  
+  9e:	c3                   	ret    
+  9f:	90                   	nop
+  release(&ptable.lock);
+  a0:	83 ec 0c             	sub    $0xc,%esp
+  return 0;
+  a3:	31 db                	xor    %ebx,%ebx
+  release(&ptable.lock);
+  a5:	68 00 00 00 00       	push   $0x0
+  aa:	e8 fc ff ff ff       	call   ab <allocproc+0xab>
+}
+  af:	89 d8                	mov    %ebx,%eax
+  return 0;
+  b1:	83 c4 10             	add    $0x10,%esp
+}
+  b4:	8b 5d fc             	mov    -0x4(%ebp),%ebx
+  b7:	c9                   	leave  
+  b8:	c3                   	ret    
+    p->state = UNUSED;
+  b9:	c7 43 0c 00 00 00 00 	movl   $0x0,0xc(%ebx)
+    return 0;
+  c0:	31 db                	xor    %ebx,%ebx
+  c2:	eb d4                	jmp    98 <allocproc+0x98>
+  c4:	8d b6 00 00 00 00    	lea    0x0(%esi),%esi
+  ca:	8d bf 00 00 00 00    	lea    0x0(%edi),%edi
+
+000000d0 <forkret>:
+
+// A fork child's very first scheduling by scheduler()
+// will swtch here.  "Return" to user space.
+void
+forkret(void)
+{
+  d0:	55                   	push   %ebp
+  d1:	89 e5                	mov    %esp,%ebp
+  d3:	83 ec 14             	sub    $0x14,%esp
+  static int first = 1;
+  // Still holding ptable.lock from scheduler.
+  release(&ptable.lock);
+  d6:	68 00 00 00 00       	push   $0x0
+  db:	e8 fc ff ff ff       	call   dc <forkret+0xc>
+
+  if (first) {
+  e0:	a1 00 00 00 00       	mov    0x0,%eax
+  e5:	83 c4 10             	add    $0x10,%esp
+  e8:	85 c0                	test   %eax,%eax
+  ea:	75 04                	jne    f0 <forkret+0x20>
+    iinit(ROOTDEV);
+    initlog(ROOTDEV);
+  }
+
+  // Return to "caller", actually trapret (see allocproc).
+}
+  ec:	c9                   	leave  
+  ed:	c3                   	ret    
+  ee:	66 90                	xchg   %ax,%ax
+    iinit(ROOTDEV);
+  f0:	83 ec 0c             	sub    $0xc,%esp
+    first = 0;
+  f3:	c7 05 00 00 00 00 00 	movl   $0x0,0x0
+  fa:	00 00 00 
+    iinit(ROOTDEV);
+  fd:	6a 01                	push   $0x1
+  ff:	e8 fc ff ff ff       	call   100 <forkret+0x30>
+    initlog(ROOTDEV);
+ 104:	c7 04 24 01 00 00 00 	movl   $0x1,(%esp)
+ 10b:	e8 fc ff ff ff       	call   10c <forkret+0x3c>
+ 110:	83 c4 10             	add    $0x10,%esp
+}
+ 113:	c9                   	leave  
+ 114:	c3                   	ret    
+ 115:	8d 74 26 00          	lea    0x0(%esi,%eiz,1),%esi
+ 119:	8d bc 27 00 00 00 00 	lea    0x0(%edi,%eiz,1),%edi
+
+00000120 <pinit>:
+{
+ 120:	55                   	push   %ebp
+ 121:	89 e5                	mov    %esp,%ebp
+ 123:	83 ec 10             	sub    $0x10,%esp
+  initlock(&ptable.lock, "ptable");
+ 126:	68 00 00 00 00       	push   $0x0
+ 12b:	68 00 00 00 00       	push   $0x0
+ 130:	e8 fc ff ff ff       	call   131 <pinit+0x11>
+}
+ 135:	83 c4 10             	add    $0x10,%esp
+ 138:	c9                   	leave  
+ 139:	c3                   	ret    
+ 13a:	8d b6 00 00 00 00    	lea    0x0(%esi),%esi
+
+00000140 <mycpu>:
+{
+ 140:	55                   	push   %ebp
+ 141:	89 e5                	mov    %esp,%ebp
+ 143:	56                   	push   %esi
+ 144:	53                   	push   %ebx
+
+static inline uint
+readeflags(void)
+{
+  uint eflags;
+  asm volatile("pushfl; popl %0" : "=r" (eflags));
+ 145:	9c                   	pushf  
+ 146:	58                   	pop    %eax
+  if(readeflags()&FL_IF)
+ 147:	f6 c4 02             	test   $0x2,%ah
+ 14a:	75 5e                	jne    1aa <mycpu+0x6a>
+  apicid = lapicid();
+ 14c:	e8 fc ff ff ff       	call   14d <mycpu+0xd>
+  for (i = 0; i < ncpu; ++i) {
+ 151:	8b 35 00 00 00 00    	mov    0x0,%esi
+ 157:	85 f6                	test   %esi,%esi
+ 159:	7e 42                	jle    19d <mycpu+0x5d>
+    if (cpus[i].apicid == apicid)
+ 15b:	0f b6 15 00 00 00 00 	movzbl 0x0,%edx
+ 162:	39 d0                	cmp    %edx,%eax
+ 164:	74 30                	je     196 <mycpu+0x56>
+ 166:	b9 b0 00 00 00       	mov    $0xb0,%ecx
+  for (i = 0; i < ncpu; ++i) {
+ 16b:	31 d2                	xor    %edx,%edx
+ 16d:	8d 76 00             	lea    0x0(%esi),%esi
+ 170:	83 c2 01             	add    $0x1,%edx
+ 173:	39 f2                	cmp    %esi,%edx
+ 175:	74 26                	je     19d <mycpu+0x5d>
+    if (cpus[i].apicid == apicid)
+ 177:	0f b6 19             	movzbl (%ecx),%ebx
+ 17a:	81 c1 b0 00 00 00    	add    $0xb0,%ecx
+ 180:	39 c3                	cmp    %eax,%ebx
+ 182:	75 ec                	jne    170 <mycpu+0x30>
+ 184:	69 c2 b0 00 00 00    	imul   $0xb0,%edx,%eax
+ 18a:	05 00 00 00 00       	add    $0x0,%eax
+}
+ 18f:	8d 65 f8             	lea    -0x8(%ebp),%esp
+ 192:	5b                   	pop    %ebx
+ 193:	5e                   	pop    %esi
+ 194:	5d                   	pop    %ebp
+ 195:	c3                   	ret    
+    if (cpus[i].apicid == apicid)
+ 196:	b8 00 00 00 00       	mov    $0x0,%eax
+      return &cpus[i];
+ 19b:	eb f2                	jmp    18f <mycpu+0x4f>
+  panic("unknown apicid\n");
+ 19d:	83 ec 0c             	sub    $0xc,%esp
+ 1a0:	68 07 00 00 00       	push   $0x7
+ 1a5:	e8 fc ff ff ff       	call   1a6 <mycpu+0x66>
+    panic("mycpu called with interrupts enabled\n");
+ 1aa:	83 ec 0c             	sub    $0xc,%esp
+ 1ad:	68 00 00 00 00       	push   $0x0
+ 1b2:	e8 fc ff ff ff       	call   1b3 <mycpu+0x73>
+ 1b7:	89 f6                	mov    %esi,%esi
+ 1b9:	8d bc 27 00 00 00 00 	lea    0x0(%edi,%eiz,1),%edi
+
+000001c0 <cpuid>:
+cpuid() {
+ 1c0:	55                   	push   %ebp
+ 1c1:	89 e5                	mov    %esp,%ebp
+ 1c3:	83 ec 08             	sub    $0x8,%esp
+  return mycpu()-cpus;
+ 1c6:	e8 fc ff ff ff       	call   1c7 <cpuid+0x7>
+ 1cb:	2d 00 00 00 00       	sub    $0x0,%eax
+}
+ 1d0:	c9                   	leave  
+  return mycpu()-cpus;
+ 1d1:	c1 f8 04             	sar    $0x4,%eax
+ 1d4:	69 c0 a3 8b 2e ba    	imul   $0xba2e8ba3,%eax,%eax
+}
+ 1da:	c3                   	ret    
+ 1db:	90                   	nop
+ 1dc:	8d 74 26 00          	lea    0x0(%esi,%eiz,1),%esi
+
+000001e0 <myproc>:
+myproc(void) {
+ 1e0:	55                   	push   %ebp
+ 1e1:	89 e5                	mov    %esp,%ebp
+ 1e3:	53                   	push   %ebx
+ 1e4:	83 ec 04             	sub    $0x4,%esp
+  pushcli();
+ 1e7:	e8 fc ff ff ff       	call   1e8 <myproc+0x8>
+  c = mycpu();
+ 1ec:	e8 fc ff ff ff       	call   1ed <myproc+0xd>
+  p = c->proc;
+ 1f1:	8b 98 ac 00 00 00    	mov    0xac(%eax),%ebx
+  popcli();
+ 1f7:	e8 fc ff ff ff       	call   1f8 <myproc+0x18>
+}
+ 1fc:	83 c4 04             	add    $0x4,%esp
+ 1ff:	89 d8                	mov    %ebx,%eax
+ 201:	5b                   	pop    %ebx
+ 202:	5d                   	pop    %ebp
+ 203:	c3                   	ret    
+ 204:	8d b6 00 00 00 00    	lea    0x0(%esi),%esi
+ 20a:	8d bf 00 00 00 00    	lea    0x0(%edi),%edi
+
+00000210 <userinit>:
+{
+ 210:	55                   	push   %ebp
+ 211:	89 e5                	mov    %esp,%ebp
+ 213:	53                   	push   %ebx
+ 214:	83 ec 04             	sub    $0x4,%esp
+  p = allocproc();
+ 217:	e8 e4 fd ff ff       	call   0 <allocproc>
+ 21c:	89 c3                	mov    %eax,%ebx
+  initproc = p;
+ 21e:	a3 00 00 00 00       	mov    %eax,0x0
+  if((p->pgdir = setupkvm()) == 0)
+ 223:	e8 fc ff ff ff       	call   224 <userinit+0x14>
+ 228:	85 c0                	test   %eax,%eax
+ 22a:	89 43 04             	mov    %eax,0x4(%ebx)
+ 22d:	0f 84 bd 00 00 00    	je     2f0 <userinit+0xe0>
+  inituvm(p->pgdir, _binary_initcode_start, (int)_binary_initcode_size);
+ 233:	83 ec 04             	sub    $0x4,%esp
+ 236:	68 00 00 00 00       	push   $0x0
+ 23b:	68 00 00 00 00       	push   $0x0
+ 240:	50                   	push   %eax
+ 241:	e8 fc ff ff ff       	call   242 <userinit+0x32>
+  memset(p->tf, 0, sizeof(*p->tf));
+ 246:	83 c4 0c             	add    $0xc,%esp
+  p->sz = PGSIZE;
+ 249:	c7 03 00 10 00 00    	movl   $0x1000,(%ebx)
+  memset(p->tf, 0, sizeof(*p->tf));
+ 24f:	6a 4c                	push   $0x4c
+ 251:	6a 00                	push   $0x0
+ 253:	ff 73 18             	pushl  0x18(%ebx)
+ 256:	e8 fc ff ff ff       	call   257 <userinit+0x47>
+  p->tf->cs = (SEG_UCODE << 3) | DPL_USER;
+ 25b:	8b 43 18             	mov    0x18(%ebx),%eax
+ 25e:	ba 1b 00 00 00       	mov    $0x1b,%edx
+  p->tf->ds = (SEG_UDATA << 3) | DPL_USER;
+ 263:	b9 23 00 00 00       	mov    $0x23,%ecx
+  safestrcpy(p->name, "initcode", sizeof(p->name));
+ 268:	83 c4 0c             	add    $0xc,%esp
+  p->tf->cs = (SEG_UCODE << 3) | DPL_USER;
+ 26b:	66 89 50 3c          	mov    %dx,0x3c(%eax)
+  p->tf->ds = (SEG_UDATA << 3) | DPL_USER;
+ 26f:	8b 43 18             	mov    0x18(%ebx),%eax
+ 272:	66 89 48 2c          	mov    %cx,0x2c(%eax)
+  p->tf->es = p->tf->ds;
+ 276:	8b 43 18             	mov    0x18(%ebx),%eax
+ 279:	0f b7 50 2c          	movzwl 0x2c(%eax),%edx
+ 27d:	66 89 50 28          	mov    %dx,0x28(%eax)
+  p->tf->ss = p->tf->ds;
+ 281:	8b 43 18             	mov    0x18(%ebx),%eax
+ 284:	0f b7 50 2c          	movzwl 0x2c(%eax),%edx
+ 288:	66 89 50 48          	mov    %dx,0x48(%eax)
+  p->tf->eflags = FL_IF;
+ 28c:	8b 43 18             	mov    0x18(%ebx),%eax
+ 28f:	c7 40 40 00 02 00 00 	movl   $0x200,0x40(%eax)
+  p->tf->esp = PGSIZE;
+ 296:	8b 43 18             	mov    0x18(%ebx),%eax
+ 299:	c7 40 44 00 10 00 00 	movl   $0x1000,0x44(%eax)
+  p->tf->eip = 0;  // beginning of initcode.S
+ 2a0:	8b 43 18             	mov    0x18(%ebx),%eax
+ 2a3:	c7 40 38 00 00 00 00 	movl   $0x0,0x38(%eax)
+  safestrcpy(p->name, "initcode", sizeof(p->name));
+ 2aa:	8d 43 6c             	lea    0x6c(%ebx),%eax
+ 2ad:	6a 10                	push   $0x10
+ 2af:	68 30 00 00 00       	push   $0x30
+ 2b4:	50                   	push   %eax
+ 2b5:	e8 fc ff ff ff       	call   2b6 <userinit+0xa6>
+  p->cwd = namei("/");
+ 2ba:	c7 04 24 39 00 00 00 	movl   $0x39,(%esp)
+ 2c1:	e8 fc ff ff ff       	call   2c2 <userinit+0xb2>
+ 2c6:	89 43 68             	mov    %eax,0x68(%ebx)
+  acquire(&ptable.lock);
+ 2c9:	c7 04 24 00 00 00 00 	movl   $0x0,(%esp)
+ 2d0:	e8 fc ff ff ff       	call   2d1 <userinit+0xc1>
+  p->state = RUNNABLE;
+ 2d5:	c7 43 0c 03 00 00 00 	movl   $0x3,0xc(%ebx)
+  release(&ptable.lock);
+ 2dc:	c7 04 24 00 00 00 00 	movl   $0x0,(%esp)
+ 2e3:	e8 fc ff ff ff       	call   2e4 <userinit+0xd4>
+}
+ 2e8:	83 c4 10             	add    $0x10,%esp
+ 2eb:	8b 5d fc             	mov    -0x4(%ebp),%ebx
+ 2ee:	c9                   	leave  
+ 2ef:	c3                   	ret    
+    panic("userinit: out of memory?");
+ 2f0:	83 ec 0c             	sub    $0xc,%esp
+ 2f3:	68 17 00 00 00       	push   $0x17
+ 2f8:	e8 fc ff ff ff       	call   2f9 <userinit+0xe9>
+ 2fd:	8d 76 00             	lea    0x0(%esi),%esi
+
+00000300 <growproc>:
+{
+ 300:	55                   	push   %ebp
+ 301:	89 e5                	mov    %esp,%ebp
+ 303:	56                   	push   %esi
+ 304:	53                   	push   %ebx
+ 305:	8b 75 08             	mov    0x8(%ebp),%esi
+  pushcli();
+ 308:	e8 fc ff ff ff       	call   309 <growproc+0x9>
+  c = mycpu();
+ 30d:	e8 fc ff ff ff       	call   30e <growproc+0xe>
+  p = c->proc;
+ 312:	8b 98 ac 00 00 00    	mov    0xac(%eax),%ebx
+  popcli();
+ 318:	e8 fc ff ff ff       	call   319 <growproc+0x19>
+  if(n > 0){
+ 31d:	83 fe 00             	cmp    $0x0,%esi
+  sz = curproc->sz;
+ 320:	8b 03                	mov    (%ebx),%eax
+  if(n > 0){
+ 322:	7f 1c                	jg     340 <growproc+0x40>
+  } else if(n < 0){
+ 324:	75 3a                	jne    360 <growproc+0x60>
+  switchuvm(curproc);
+ 326:	83 ec 0c             	sub    $0xc,%esp
+  curproc->sz = sz;
+ 329:	89 03                	mov    %eax,(%ebx)
+  switchuvm(curproc);
+ 32b:	53                   	push   %ebx
+ 32c:	e8 fc ff ff ff       	call   32d <growproc+0x2d>
+  return 0;
+ 331:	83 c4 10             	add    $0x10,%esp
+ 334:	31 c0                	xor    %eax,%eax
+}
+ 336:	8d 65 f8             	lea    -0x8(%ebp),%esp
+ 339:	5b                   	pop    %ebx
+ 33a:	5e                   	pop    %esi
+ 33b:	5d                   	pop    %ebp
+ 33c:	c3                   	ret    
+ 33d:	8d 76 00             	lea    0x0(%esi),%esi
+    if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0)
+ 340:	83 ec 04             	sub    $0x4,%esp
+ 343:	01 c6                	add    %eax,%esi
+ 345:	56                   	push   %esi
+ 346:	50                   	push   %eax
+ 347:	ff 73 04             	pushl  0x4(%ebx)
+ 34a:	e8 fc ff ff ff       	call   34b <growproc+0x4b>
+ 34f:	83 c4 10             	add    $0x10,%esp
+ 352:	85 c0                	test   %eax,%eax
+ 354:	75 d0                	jne    326 <growproc+0x26>
+      return -1;
+ 356:	b8 ff ff ff ff       	mov    $0xffffffff,%eax
+ 35b:	eb d9                	jmp    336 <growproc+0x36>
+ 35d:	8d 76 00             	lea    0x0(%esi),%esi
+    if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0)
+ 360:	83 ec 04             	sub    $0x4,%esp
+ 363:	01 c6                	add    %eax,%esi
+ 365:	56                   	push   %esi
+ 366:	50                   	push   %eax
+ 367:	ff 73 04             	pushl  0x4(%ebx)
+ 36a:	e8 fc ff ff ff       	call   36b <growproc+0x6b>
+ 36f:	83 c4 10             	add    $0x10,%esp
+ 372:	85 c0                	test   %eax,%eax
+ 374:	75 b0                	jne    326 <growproc+0x26>
+ 376:	eb de                	jmp    356 <growproc+0x56>
+ 378:	90                   	nop
+ 379:	8d b4 26 00 00 00 00 	lea    0x0(%esi,%eiz,1),%esi
+
+00000380 <fork>:
+{
+ 380:	55                   	push   %ebp
+ 381:	89 e5                	mov    %esp,%ebp
+ 383:	57                   	push   %edi
+ 384:	56                   	push   %esi
+ 385:	53                   	push   %ebx
+ 386:	83 ec 1c             	sub    $0x1c,%esp
+  pushcli();
+ 389:	e8 fc ff ff ff       	call   38a <fork+0xa>
+  c = mycpu();
+ 38e:	e8 fc ff ff ff       	call   38f <fork+0xf>
+  p = c->proc;
+ 393:	8b 98 ac 00 00 00    	mov    0xac(%eax),%ebx
+  popcli();
+ 399:	e8 fc ff ff ff       	call   39a <fork+0x1a>
+  if((np = allocproc()) == 0){
+ 39e:	e8 5d fc ff ff       	call   0 <allocproc>
+ 3a3:	85 c0                	test   %eax,%eax
+ 3a5:	89 45 e4             	mov    %eax,-0x1c(%ebp)
+ 3a8:	0f 84 b7 00 00 00    	je     465 <fork+0xe5>
+  if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
+ 3ae:	83 ec 08             	sub    $0x8,%esp
+ 3b1:	ff 33                	pushl  (%ebx)
+ 3b3:	ff 73 04             	pushl  0x4(%ebx)
+ 3b6:	89 c7                	mov    %eax,%edi
+ 3b8:	e8 fc ff ff ff       	call   3b9 <fork+0x39>
+ 3bd:	83 c4 10             	add    $0x10,%esp
+ 3c0:	85 c0                	test   %eax,%eax
+ 3c2:	89 47 04             	mov    %eax,0x4(%edi)
+ 3c5:	0f 84 a1 00 00 00    	je     46c <fork+0xec>
+  np->sz = curproc->sz;
+ 3cb:	8b 03                	mov    (%ebx),%eax
+ 3cd:	8b 4d e4             	mov    -0x1c(%ebp),%ecx
+ 3d0:	89 01                	mov    %eax,(%ecx)
+  np->parent = curproc;
+ 3d2:	89 59 14             	mov    %ebx,0x14(%ecx)
+ 3d5:	89 c8                	mov    %ecx,%eax
+  *np->tf = *curproc->tf;
+ 3d7:	8b 79 18             	mov    0x18(%ecx),%edi
+ 3da:	8b 73 18             	mov    0x18(%ebx),%esi
+ 3dd:	b9 13 00 00 00       	mov    $0x13,%ecx
+ 3e2:	f3 a5                	rep movsl %ds:(%esi),%es:(%edi)
+  for(i = 0; i < NOFILE; i++)
+ 3e4:	31 f6                	xor    %esi,%esi
+  np->tf->eax = 0;
+ 3e6:	8b 40 18             	mov    0x18(%eax),%eax
+ 3e9:	c7 40 1c 00 00 00 00 	movl   $0x0,0x1c(%eax)
+    if(curproc->ofile[i])
+ 3f0:	8b 44 b3 28          	mov    0x28(%ebx,%esi,4),%eax
+ 3f4:	85 c0                	test   %eax,%eax
+ 3f6:	74 13                	je     40b <fork+0x8b>
+      np->ofile[i] = filedup(curproc->ofile[i]);
+ 3f8:	83 ec 0c             	sub    $0xc,%esp
+ 3fb:	50                   	push   %eax
+ 3fc:	e8 fc ff ff ff       	call   3fd <fork+0x7d>
+ 401:	8b 55 e4             	mov    -0x1c(%ebp),%edx
+ 404:	83 c4 10             	add    $0x10,%esp
+ 407:	89 44 b2 28          	mov    %eax,0x28(%edx,%esi,4)
+  for(i = 0; i < NOFILE; i++)
+ 40b:	83 c6 01             	add    $0x1,%esi
+ 40e:	83 fe 10             	cmp    $0x10,%esi
+ 411:	75 dd                	jne    3f0 <fork+0x70>
+  np->cwd = idup(curproc->cwd);
+ 413:	83 ec 0c             	sub    $0xc,%esp
+ 416:	ff 73 68             	pushl  0x68(%ebx)
+  safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+ 419:	83 c3 6c             	add    $0x6c,%ebx
+  np->cwd = idup(curproc->cwd);
+ 41c:	e8 fc ff ff ff       	call   41d <fork+0x9d>
+ 421:	8b 7d e4             	mov    -0x1c(%ebp),%edi
+  safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+ 424:	83 c4 0c             	add    $0xc,%esp
+  np->cwd = idup(curproc->cwd);
+ 427:	89 47 68             	mov    %eax,0x68(%edi)
+  safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+ 42a:	8d 47 6c             	lea    0x6c(%edi),%eax
+ 42d:	6a 10                	push   $0x10
+ 42f:	53                   	push   %ebx
+ 430:	50                   	push   %eax
+ 431:	e8 fc ff ff ff       	call   432 <fork+0xb2>
+  pid = np->pid;
+ 436:	8b 5f 10             	mov    0x10(%edi),%ebx
+  acquire(&ptable.lock);
+ 439:	c7 04 24 00 00 00 00 	movl   $0x0,(%esp)
+ 440:	e8 fc ff ff ff       	call   441 <fork+0xc1>
+  np->state = RUNNABLE;
+ 445:	c7 47 0c 03 00 00 00 	movl   $0x3,0xc(%edi)
+  release(&ptable.lock);
+ 44c:	c7 04 24 00 00 00 00 	movl   $0x0,(%esp)
+ 453:	e8 fc ff ff ff       	call   454 <fork+0xd4>
+  return pid;
+ 458:	83 c4 10             	add    $0x10,%esp
+}
+ 45b:	8d 65 f4             	lea    -0xc(%ebp),%esp
+ 45e:	89 d8                	mov    %ebx,%eax
+ 460:	5b                   	pop    %ebx
+ 461:	5e                   	pop    %esi
+ 462:	5f                   	pop    %edi
+ 463:	5d                   	pop    %ebp
+ 464:	c3                   	ret    
+    return -1;
+ 465:	bb ff ff ff ff       	mov    $0xffffffff,%ebx
+ 46a:	eb ef                	jmp    45b <fork+0xdb>
+    kfree(np->kstack);
+ 46c:	8b 5d e4             	mov    -0x1c(%ebp),%ebx
+ 46f:	83 ec 0c             	sub    $0xc,%esp
+ 472:	ff 73 08             	pushl  0x8(%ebx)
+ 475:	e8 fc ff ff ff       	call   476 <fork+0xf6>
+    np->kstack = 0;
+ 47a:	c7 43 08 00 00 00 00 	movl   $0x0,0x8(%ebx)
+    np->state = UNUSED;
+ 481:	c7 43 0c 00 00 00 00 	movl   $0x0,0xc(%ebx)
+    return -1;
+ 488:	83 c4 10             	add    $0x10,%esp
+ 48b:	bb ff ff ff ff       	mov    $0xffffffff,%ebx
+ 490:	eb c9                	jmp    45b <fork+0xdb>
+ 492:	8d b4 26 00 00 00 00 	lea    0x0(%esi,%eiz,1),%esi
+ 499:	8d bc 27 00 00 00 00 	lea    0x0(%edi,%eiz,1),%edi
+
+000004a0 <scheduler>:
+{
+ 4a0:	55                   	push   %ebp
+ 4a1:	89 e5                	mov    %esp,%ebp
+ 4a3:	57                   	push   %edi
+ 4a4:	56                   	push   %esi
+ 4a5:	53                   	push   %ebx
+ 4a6:	83 ec 0c             	sub    $0xc,%esp
+  struct cpu *c = mycpu();
+ 4a9:	e8 fc ff ff ff       	call   4aa <scheduler+0xa>
+ 4ae:	8d 78 04             	lea    0x4(%eax),%edi
+ 4b1:	89 c6                	mov    %eax,%esi
+  c->proc = 0;
+ 4b3:	c7 80 ac 00 00 00 00 	movl   $0x0,0xac(%eax)
+ 4ba:	00 00 00 
+ 4bd:	8d 76 00             	lea    0x0(%esi),%esi
+}
+
+static inline void
+sti(void)
+{
+  asm volatile("sti");
+ 4c0:	fb                   	sti    
+    acquire(&ptable.lock);
+ 4c1:	83 ec 0c             	sub    $0xc,%esp
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+ 4c4:	bb 34 00 00 00       	mov    $0x34,%ebx
+    acquire(&ptable.lock);
+ 4c9:	68 00 00 00 00       	push   $0x0
+ 4ce:	e8 fc ff ff ff       	call   4cf <scheduler+0x2f>
+ 4d3:	83 c4 10             	add    $0x10,%esp
+ 4d6:	8d 76 00             	lea    0x0(%esi),%esi
+ 4d9:	8d bc 27 00 00 00 00 	lea    0x0(%edi,%eiz,1),%edi
+      if(p->state != RUNNABLE)
+ 4e0:	83 7b 0c 03          	cmpl   $0x3,0xc(%ebx)
+ 4e4:	75 33                	jne    519 <scheduler+0x79>
+      switchuvm(p);
+ 4e6:	83 ec 0c             	sub    $0xc,%esp
+      c->proc = p;
+ 4e9:	89 9e ac 00 00 00    	mov    %ebx,0xac(%esi)
+      switchuvm(p);
+ 4ef:	53                   	push   %ebx
+ 4f0:	e8 fc ff ff ff       	call   4f1 <scheduler+0x51>
+      swtch(&(c->scheduler), p->context);
+ 4f5:	58                   	pop    %eax
+ 4f6:	5a                   	pop    %edx
+ 4f7:	ff 73 1c             	pushl  0x1c(%ebx)
+ 4fa:	57                   	push   %edi
+      p->state = RUNNING;
+ 4fb:	c7 43 0c 04 00 00 00 	movl   $0x4,0xc(%ebx)
+      swtch(&(c->scheduler), p->context);
+ 502:	e8 fc ff ff ff       	call   503 <scheduler+0x63>
+      switchkvm();
+ 507:	e8 fc ff ff ff       	call   508 <scheduler+0x68>
+      c->proc = 0;
+ 50c:	c7 86 ac 00 00 00 00 	movl   $0x0,0xac(%esi)
+ 513:	00 00 00 
+ 516:	83 c4 10             	add    $0x10,%esp
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+ 519:	83 c3 7c             	add    $0x7c,%ebx
+ 51c:	81 fb 34 1f 00 00    	cmp    $0x1f34,%ebx
+ 522:	72 bc                	jb     4e0 <scheduler+0x40>
+    release(&ptable.lock);
+ 524:	83 ec 0c             	sub    $0xc,%esp
+ 527:	68 00 00 00 00       	push   $0x0
+ 52c:	e8 fc ff ff ff       	call   52d <scheduler+0x8d>
+    sti();
+ 531:	83 c4 10             	add    $0x10,%esp
+ 534:	eb 8a                	jmp    4c0 <scheduler+0x20>
+ 536:	8d 76 00             	lea    0x0(%esi),%esi
+ 539:	8d bc 27 00 00 00 00 	lea    0x0(%edi,%eiz,1),%edi
+
+00000540 <sched>:
+{
+ 540:	55                   	push   %ebp
+ 541:	89 e5                	mov    %esp,%ebp
+ 543:	56                   	push   %esi
+ 544:	53                   	push   %ebx
+  pushcli();
+ 545:	e8 fc ff ff ff       	call   546 <sched+0x6>
+  c = mycpu();
+ 54a:	e8 fc ff ff ff       	call   54b <sched+0xb>
+  p = c->proc;
+ 54f:	8b 98 ac 00 00 00    	mov    0xac(%eax),%ebx
+  popcli();
+ 555:	e8 fc ff ff ff       	call   556 <sched+0x16>
+  if(!holding(&ptable.lock))
+ 55a:	83 ec 0c             	sub    $0xc,%esp
+ 55d:	68 00 00 00 00       	push   $0x0
+ 562:	e8 fc ff ff ff       	call   563 <sched+0x23>
+ 567:	83 c4 10             	add    $0x10,%esp
+ 56a:	85 c0                	test   %eax,%eax
+ 56c:	74 4f                	je     5bd <sched+0x7d>
+  if(mycpu()->ncli != 1)
+ 56e:	e8 fc ff ff ff       	call   56f <sched+0x2f>
+ 573:	83 b8 a4 00 00 00 01 	cmpl   $0x1,0xa4(%eax)
+ 57a:	75 68                	jne    5e4 <sched+0xa4>
+  if(p->state == RUNNING)
+ 57c:	83 7b 0c 04          	cmpl   $0x4,0xc(%ebx)
+ 580:	74 55                	je     5d7 <sched+0x97>
+  asm volatile("pushfl; popl %0" : "=r" (eflags));
+ 582:	9c                   	pushf  
+ 583:	58                   	pop    %eax
+  if(readeflags()&FL_IF)
+ 584:	f6 c4 02             	test   $0x2,%ah
+ 587:	75 41                	jne    5ca <sched+0x8a>
+  intena = mycpu()->intena;
+ 589:	e8 fc ff ff ff       	call   58a <sched+0x4a>
+  swtch(&p->context, mycpu()->scheduler);
+ 58e:	83 c3 1c             	add    $0x1c,%ebx
+  intena = mycpu()->intena;
+ 591:	8b b0 a8 00 00 00    	mov    0xa8(%eax),%esi
+  swtch(&p->context, mycpu()->scheduler);
+ 597:	e8 fc ff ff ff       	call   598 <sched+0x58>
+ 59c:	83 ec 08             	sub    $0x8,%esp
+ 59f:	ff 70 04             	pushl  0x4(%eax)
+ 5a2:	53                   	push   %ebx
+ 5a3:	e8 fc ff ff ff       	call   5a4 <sched+0x64>
+  mycpu()->intena = intena;
+ 5a8:	e8 fc ff ff ff       	call   5a9 <sched+0x69>
+}
+ 5ad:	83 c4 10             	add    $0x10,%esp
+  mycpu()->intena = intena;
+ 5b0:	89 b0 a8 00 00 00    	mov    %esi,0xa8(%eax)
+}
+ 5b6:	8d 65 f8             	lea    -0x8(%ebp),%esp
+ 5b9:	5b                   	pop    %ebx
+ 5ba:	5e                   	pop    %esi
+ 5bb:	5d                   	pop    %ebp
+ 5bc:	c3                   	ret    
+    panic("sched ptable.lock");
+ 5bd:	83 ec 0c             	sub    $0xc,%esp
+ 5c0:	68 3b 00 00 00       	push   $0x3b
+ 5c5:	e8 fc ff ff ff       	call   5c6 <sched+0x86>
+    panic("sched interruptible");
+ 5ca:	83 ec 0c             	sub    $0xc,%esp
+ 5cd:	68 67 00 00 00       	push   $0x67
+ 5d2:	e8 fc ff ff ff       	call   5d3 <sched+0x93>
+    panic("sched running");
+ 5d7:	83 ec 0c             	sub    $0xc,%esp
+ 5da:	68 59 00 00 00       	push   $0x59
+ 5df:	e8 fc ff ff ff       	call   5e0 <sched+0xa0>
+    panic("sched locks");
+ 5e4:	83 ec 0c             	sub    $0xc,%esp
+ 5e7:	68 4d 00 00 00       	push   $0x4d
+ 5ec:	e8 fc ff ff ff       	call   5ed <sched+0xad>
+ 5f1:	eb 0d                	jmp    600 <exit>
+ 5f3:	90                   	nop
+ 5f4:	90                   	nop
+ 5f5:	90                   	nop
+ 5f6:	90                   	nop
+ 5f7:	90                   	nop
+ 5f8:	90                   	nop
+ 5f9:	90                   	nop
+ 5fa:	90                   	nop
+ 5fb:	90                   	nop
+ 5fc:	90                   	nop
+ 5fd:	90                   	nop
+ 5fe:	90                   	nop
+ 5ff:	90                   	nop
+
+00000600 <exit>:
+{
+ 600:	55                   	push   %ebp
+ 601:	89 e5                	mov    %esp,%ebp
+ 603:	57                   	push   %edi
+ 604:	56                   	push   %esi
+ 605:	53                   	push   %ebx
+ 606:	83 ec 0c             	sub    $0xc,%esp
+  pushcli();
+ 609:	e8 fc ff ff ff       	call   60a <exit+0xa>
+  c = mycpu();
+ 60e:	e8 fc ff ff ff       	call   60f <exit+0xf>
+  p = c->proc;
+ 613:	8b b0 ac 00 00 00    	mov    0xac(%eax),%esi
+  popcli();
+ 619:	e8 fc ff ff ff       	call   61a <exit+0x1a>
+  if(curproc == initproc)
+ 61e:	39 35 00 00 00 00    	cmp    %esi,0x0
+ 624:	8d 5e 28             	lea    0x28(%esi),%ebx
+ 627:	8d 7e 68             	lea    0x68(%esi),%edi
+ 62a:	0f 84 e7 00 00 00    	je     717 <exit+0x117>
+    if(curproc->ofile[fd]){
+ 630:	8b 03                	mov    (%ebx),%eax
+ 632:	85 c0                	test   %eax,%eax
+ 634:	74 12                	je     648 <exit+0x48>
+      fileclose(curproc->ofile[fd]);
+ 636:	83 ec 0c             	sub    $0xc,%esp
+ 639:	50                   	push   %eax
+ 63a:	e8 fc ff ff ff       	call   63b <exit+0x3b>
+      curproc->ofile[fd] = 0;
+ 63f:	c7 03 00 00 00 00    	movl   $0x0,(%ebx)
+ 645:	83 c4 10             	add    $0x10,%esp
+ 648:	83 c3 04             	add    $0x4,%ebx
+  for(fd = 0; fd < NOFILE; fd++){
+ 64b:	39 fb                	cmp    %edi,%ebx
+ 64d:	75 e1                	jne    630 <exit+0x30>
+  begin_op();
+ 64f:	e8 fc ff ff ff       	call   650 <exit+0x50>
+  iput(curproc->cwd);
+ 654:	83 ec 0c             	sub    $0xc,%esp
+ 657:	ff 76 68             	pushl  0x68(%esi)
+ 65a:	e8 fc ff ff ff       	call   65b <exit+0x5b>
+  end_op();
+ 65f:	e8 fc ff ff ff       	call   660 <exit+0x60>
+  curproc->cwd = 0;
+ 664:	c7 46 68 00 00 00 00 	movl   $0x0,0x68(%esi)
+  acquire(&ptable.lock);
+ 66b:	c7 04 24 00 00 00 00 	movl   $0x0,(%esp)
+ 672:	e8 fc ff ff ff       	call   673 <exit+0x73>
+  wakeup1(curproc->parent);
+ 677:	8b 56 14             	mov    0x14(%esi),%edx
+ 67a:	83 c4 10             	add    $0x10,%esp
+static void
+wakeup1(void *chan)
+{
+  struct proc *p;
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+ 67d:	b8 34 00 00 00       	mov    $0x34,%eax
+ 682:	eb 0e                	jmp    692 <exit+0x92>
+ 684:	8d 74 26 00          	lea    0x0(%esi,%eiz,1),%esi
+ 688:	83 c0 7c             	add    $0x7c,%eax
+ 68b:	3d 34 1f 00 00       	cmp    $0x1f34,%eax
+ 690:	73 1c                	jae    6ae <exit+0xae>
+    if(p->state == SLEEPING && p->chan == chan)
+ 692:	83 78 0c 02          	cmpl   $0x2,0xc(%eax)
+ 696:	75 f0                	jne    688 <exit+0x88>
+ 698:	3b 50 20             	cmp    0x20(%eax),%edx
+ 69b:	75 eb                	jne    688 <exit+0x88>
+      p->state = RUNNABLE;
+ 69d:	c7 40 0c 03 00 00 00 	movl   $0x3,0xc(%eax)
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+ 6a4:	83 c0 7c             	add    $0x7c,%eax
+ 6a7:	3d 34 1f 00 00       	cmp    $0x1f34,%eax
+ 6ac:	72 e4                	jb     692 <exit+0x92>
+      p->parent = initproc;
+ 6ae:	8b 0d 00 00 00 00    	mov    0x0,%ecx
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+ 6b4:	ba 34 00 00 00       	mov    $0x34,%edx
+ 6b9:	eb 10                	jmp    6cb <exit+0xcb>
+ 6bb:	90                   	nop
+ 6bc:	8d 74 26 00          	lea    0x0(%esi,%eiz,1),%esi
+ 6c0:	83 c2 7c             	add    $0x7c,%edx
+ 6c3:	81 fa 34 1f 00 00    	cmp    $0x1f34,%edx
+ 6c9:	73 33                	jae    6fe <exit+0xfe>
+    if(p->parent == curproc){
+ 6cb:	39 72 14             	cmp    %esi,0x14(%edx)
+ 6ce:	75 f0                	jne    6c0 <exit+0xc0>
+      if(p->state == ZOMBIE)
+ 6d0:	83 7a 0c 05          	cmpl   $0x5,0xc(%edx)
+      p->parent = initproc;
+ 6d4:	89 4a 14             	mov    %ecx,0x14(%edx)
+      if(p->state == ZOMBIE)
+ 6d7:	75 e7                	jne    6c0 <exit+0xc0>
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+ 6d9:	b8 34 00 00 00       	mov    $0x34,%eax
+ 6de:	eb 0a                	jmp    6ea <exit+0xea>
+ 6e0:	83 c0 7c             	add    $0x7c,%eax
+ 6e3:	3d 34 1f 00 00       	cmp    $0x1f34,%eax
+ 6e8:	73 d6                	jae    6c0 <exit+0xc0>
+    if(p->state == SLEEPING && p->chan == chan)
+ 6ea:	83 78 0c 02          	cmpl   $0x2,0xc(%eax)
+ 6ee:	75 f0                	jne    6e0 <exit+0xe0>
+ 6f0:	3b 48 20             	cmp    0x20(%eax),%ecx
+ 6f3:	75 eb                	jne    6e0 <exit+0xe0>
+      p->state = RUNNABLE;
+ 6f5:	c7 40 0c 03 00 00 00 	movl   $0x3,0xc(%eax)
+ 6fc:	eb e2                	jmp    6e0 <exit+0xe0>
+  curproc->state = ZOMBIE;
+ 6fe:	c7 46 0c 05 00 00 00 	movl   $0x5,0xc(%esi)
+  sched();
+ 705:	e8 fc ff ff ff       	call   706 <exit+0x106>
+  panic("zombie exit");
+ 70a:	83 ec 0c             	sub    $0xc,%esp
+ 70d:	68 88 00 00 00       	push   $0x88
+ 712:	e8 fc ff ff ff       	call   713 <exit+0x113>
+    panic("init exiting");
+ 717:	83 ec 0c             	sub    $0xc,%esp
+ 71a:	68 7b 00 00 00       	push   $0x7b
+ 71f:	e8 fc ff ff ff       	call   720 <exit+0x120>
+ 724:	8d b6 00 00 00 00    	lea    0x0(%esi),%esi
+ 72a:	8d bf 00 00 00 00    	lea    0x0(%edi),%edi
+
+00000730 <yield>:
+{
+ 730:	55                   	push   %ebp
+ 731:	89 e5                	mov    %esp,%ebp
+ 733:	53                   	push   %ebx
+ 734:	83 ec 10             	sub    $0x10,%esp
+  acquire(&ptable.lock);  //DOC: yieldlock
+ 737:	68 00 00 00 00       	push   $0x0
+ 73c:	e8 fc ff ff ff       	call   73d <yield+0xd>
+  pushcli();
+ 741:	e8 fc ff ff ff       	call   742 <yield+0x12>
+  c = mycpu();
+ 746:	e8 fc ff ff ff       	call   747 <yield+0x17>
+  p = c->proc;
+ 74b:	8b 98 ac 00 00 00    	mov    0xac(%eax),%ebx
+  popcli();
+ 751:	e8 fc ff ff ff       	call   752 <yield+0x22>
+  myproc()->state = RUNNABLE;
+ 756:	c7 43 0c 03 00 00 00 	movl   $0x3,0xc(%ebx)
+  sched();
+ 75d:	e8 fc ff ff ff       	call   75e <yield+0x2e>
+  release(&ptable.lock);
+ 762:	c7 04 24 00 00 00 00 	movl   $0x0,(%esp)
+ 769:	e8 fc ff ff ff       	call   76a <yield+0x3a>
+}
+ 76e:	83 c4 10             	add    $0x10,%esp
+ 771:	8b 5d fc             	mov    -0x4(%ebp),%ebx
+ 774:	c9                   	leave  
+ 775:	c3                   	ret    
+ 776:	8d 76 00             	lea    0x0(%esi),%esi
+ 779:	8d bc 27 00 00 00 00 	lea    0x0(%edi,%eiz,1),%edi
+
+00000780 <sleep>:
+{
+ 780:	55                   	push   %ebp
+ 781:	89 e5                	mov    %esp,%ebp
+ 783:	57                   	push   %edi
+ 784:	56                   	push   %esi
+ 785:	53                   	push   %ebx
+ 786:	83 ec 0c             	sub    $0xc,%esp
+ 789:	8b 7d 08             	mov    0x8(%ebp),%edi
+ 78c:	8b 75 0c             	mov    0xc(%ebp),%esi
+  pushcli();
+ 78f:	e8 fc ff ff ff       	call   790 <sleep+0x10>
+  c = mycpu();
+ 794:	e8 fc ff ff ff       	call   795 <sleep+0x15>
+  p = c->proc;
+ 799:	8b 98 ac 00 00 00    	mov    0xac(%eax),%ebx
+  popcli();
+ 79f:	e8 fc ff ff ff       	call   7a0 <sleep+0x20>
+  if(p == 0)
+ 7a4:	85 db                	test   %ebx,%ebx
+ 7a6:	0f 84 87 00 00 00    	je     833 <sleep+0xb3>
+  if(lk == 0)
+ 7ac:	85 f6                	test   %esi,%esi
+ 7ae:	74 76                	je     826 <sleep+0xa6>
+  if(lk != &ptable.lock){  //DOC: sleeplock0
+ 7b0:	81 fe 00 00 00 00    	cmp    $0x0,%esi
+ 7b6:	74 50                	je     808 <sleep+0x88>
+    acquire(&ptable.lock);  //DOC: sleeplock1
+ 7b8:	83 ec 0c             	sub    $0xc,%esp
+ 7bb:	68 00 00 00 00       	push   $0x0
+ 7c0:	e8 fc ff ff ff       	call   7c1 <sleep+0x41>
+    release(lk);
+ 7c5:	89 34 24             	mov    %esi,(%esp)
+ 7c8:	e8 fc ff ff ff       	call   7c9 <sleep+0x49>
+  p->chan = chan;
+ 7cd:	89 7b 20             	mov    %edi,0x20(%ebx)
+  p->state = SLEEPING;
+ 7d0:	c7 43 0c 02 00 00 00 	movl   $0x2,0xc(%ebx)
+  sched();
+ 7d7:	e8 fc ff ff ff       	call   7d8 <sleep+0x58>
+  p->chan = 0;
+ 7dc:	c7 43 20 00 00 00 00 	movl   $0x0,0x20(%ebx)
+    release(&ptable.lock);
+ 7e3:	c7 04 24 00 00 00 00 	movl   $0x0,(%esp)
+ 7ea:	e8 fc ff ff ff       	call   7eb <sleep+0x6b>
+    acquire(lk);
+ 7ef:	89 75 08             	mov    %esi,0x8(%ebp)
+ 7f2:	83 c4 10             	add    $0x10,%esp
+}
+ 7f5:	8d 65 f4             	lea    -0xc(%ebp),%esp
+ 7f8:	5b                   	pop    %ebx
+ 7f9:	5e                   	pop    %esi
+ 7fa:	5f                   	pop    %edi
+ 7fb:	5d                   	pop    %ebp
+    acquire(lk);
+ 7fc:	e9 fc ff ff ff       	jmp    7fd <sleep+0x7d>
+ 801:	8d b4 26 00 00 00 00 	lea    0x0(%esi,%eiz,1),%esi
+  p->chan = chan;
+ 808:	89 7b 20             	mov    %edi,0x20(%ebx)
+  p->state = SLEEPING;
+ 80b:	c7 43 0c 02 00 00 00 	movl   $0x2,0xc(%ebx)
+  sched();
+ 812:	e8 fc ff ff ff       	call   813 <sleep+0x93>
+  p->chan = 0;
+ 817:	c7 43 20 00 00 00 00 	movl   $0x0,0x20(%ebx)
+}
+ 81e:	8d 65 f4             	lea    -0xc(%ebp),%esp
+ 821:	5b                   	pop    %ebx
+ 822:	5e                   	pop    %esi
+ 823:	5f                   	pop    %edi
+ 824:	5d                   	pop    %ebp
+ 825:	c3                   	ret    
+    panic("sleep without lk");
+ 826:	83 ec 0c             	sub    $0xc,%esp
+ 829:	68 9a 00 00 00       	push   $0x9a
+ 82e:	e8 fc ff ff ff       	call   82f <sleep+0xaf>
+    panic("sleep");
+ 833:	83 ec 0c             	sub    $0xc,%esp
+ 836:	68 94 00 00 00       	push   $0x94
+ 83b:	e8 fc ff ff ff       	call   83c <sleep+0xbc>
+
+00000840 <wait>:
+{
+ 840:	55                   	push   %ebp
+ 841:	89 e5                	mov    %esp,%ebp
+ 843:	56                   	push   %esi
+ 844:	53                   	push   %ebx
+  pushcli();
+ 845:	e8 fc ff ff ff       	call   846 <wait+0x6>
+  c = mycpu();
+ 84a:	e8 fc ff ff ff       	call   84b <wait+0xb>
+  p = c->proc;
+ 84f:	8b b0 ac 00 00 00    	mov    0xac(%eax),%esi
+  popcli();
+ 855:	e8 fc ff ff ff       	call   856 <wait+0x16>
+  acquire(&ptable.lock);
+ 85a:	83 ec 0c             	sub    $0xc,%esp
+ 85d:	68 00 00 00 00       	push   $0x0
+ 862:	e8 fc ff ff ff       	call   863 <wait+0x23>
+ 867:	83 c4 10             	add    $0x10,%esp
+    havekids = 0;
+ 86a:	31 c0                	xor    %eax,%eax
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+ 86c:	bb 34 00 00 00       	mov    $0x34,%ebx
+ 871:	eb 10                	jmp    883 <wait+0x43>
+ 873:	90                   	nop
+ 874:	8d 74 26 00          	lea    0x0(%esi,%eiz,1),%esi
+ 878:	83 c3 7c             	add    $0x7c,%ebx
+ 87b:	81 fb 34 1f 00 00    	cmp    $0x1f34,%ebx
+ 881:	73 1b                	jae    89e <wait+0x5e>
+      if(p->parent != curproc)
+ 883:	39 73 14             	cmp    %esi,0x14(%ebx)
+ 886:	75 f0                	jne    878 <wait+0x38>
+      if(p->state == ZOMBIE){
+ 888:	83 7b 0c 05          	cmpl   $0x5,0xc(%ebx)
+ 88c:	74 32                	je     8c0 <wait+0x80>
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+ 88e:	83 c3 7c             	add    $0x7c,%ebx
+      havekids = 1;
+ 891:	b8 01 00 00 00       	mov    $0x1,%eax
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+ 896:	81 fb 34 1f 00 00    	cmp    $0x1f34,%ebx
+ 89c:	72 e5                	jb     883 <wait+0x43>
+    if(!havekids || curproc->killed){
+ 89e:	85 c0                	test   %eax,%eax
+ 8a0:	74 74                	je     916 <wait+0xd6>
+ 8a2:	8b 46 24             	mov    0x24(%esi),%eax
+ 8a5:	85 c0                	test   %eax,%eax
+ 8a7:	75 6d                	jne    916 <wait+0xd6>
+    sleep(curproc, &ptable.lock);  //DOC: wait-sleep
+ 8a9:	83 ec 08             	sub    $0x8,%esp
+ 8ac:	68 00 00 00 00       	push   $0x0
+ 8b1:	56                   	push   %esi
+ 8b2:	e8 fc ff ff ff       	call   8b3 <wait+0x73>
+    havekids = 0;
+ 8b7:	83 c4 10             	add    $0x10,%esp
+ 8ba:	eb ae                	jmp    86a <wait+0x2a>
+ 8bc:	8d 74 26 00          	lea    0x0(%esi,%eiz,1),%esi
+        kfree(p->kstack);
+ 8c0:	83 ec 0c             	sub    $0xc,%esp
+ 8c3:	ff 73 08             	pushl  0x8(%ebx)
+        pid = p->pid;
+ 8c6:	8b 73 10             	mov    0x10(%ebx),%esi
+        kfree(p->kstack);
+ 8c9:	e8 fc ff ff ff       	call   8ca <wait+0x8a>
+        freevm(p->pgdir);
+ 8ce:	5a                   	pop    %edx
+ 8cf:	ff 73 04             	pushl  0x4(%ebx)
+        p->kstack = 0;
+ 8d2:	c7 43 08 00 00 00 00 	movl   $0x0,0x8(%ebx)
+        freevm(p->pgdir);
+ 8d9:	e8 fc ff ff ff       	call   8da <wait+0x9a>
+        release(&ptable.lock);
+ 8de:	c7 04 24 00 00 00 00 	movl   $0x0,(%esp)
+        p->pid = 0;
+ 8e5:	c7 43 10 00 00 00 00 	movl   $0x0,0x10(%ebx)
+        p->parent = 0;
+ 8ec:	c7 43 14 00 00 00 00 	movl   $0x0,0x14(%ebx)
+        p->name[0] = 0;
+ 8f3:	c6 43 6c 00          	movb   $0x0,0x6c(%ebx)
+        p->killed = 0;
+ 8f7:	c7 43 24 00 00 00 00 	movl   $0x0,0x24(%ebx)
+        p->state = UNUSED;
+ 8fe:	c7 43 0c 00 00 00 00 	movl   $0x0,0xc(%ebx)
+        release(&ptable.lock);
+ 905:	e8 fc ff ff ff       	call   906 <wait+0xc6>
+        return pid;
+ 90a:	83 c4 10             	add    $0x10,%esp
+}
+ 90d:	8d 65 f8             	lea    -0x8(%ebp),%esp
+ 910:	89 f0                	mov    %esi,%eax
+ 912:	5b                   	pop    %ebx
+ 913:	5e                   	pop    %esi
+ 914:	5d                   	pop    %ebp
+ 915:	c3                   	ret    
+      release(&ptable.lock);
+ 916:	83 ec 0c             	sub    $0xc,%esp
+      return -1;
+ 919:	be ff ff ff ff       	mov    $0xffffffff,%esi
+      release(&ptable.lock);
+ 91e:	68 00 00 00 00       	push   $0x0
+ 923:	e8 fc ff ff ff       	call   924 <wait+0xe4>
+      return -1;
+ 928:	83 c4 10             	add    $0x10,%esp
+ 92b:	eb e0                	jmp    90d <wait+0xcd>
+ 92d:	8d 76 00             	lea    0x0(%esi),%esi
+
+00000930 <wakeup>:
+}
+
+// Wake up all processes sleeping on chan.
+void
+wakeup(void *chan)
+{
+ 930:	55                   	push   %ebp
+ 931:	89 e5                	mov    %esp,%ebp
+ 933:	53                   	push   %ebx
+ 934:	83 ec 10             	sub    $0x10,%esp
+ 937:	8b 5d 08             	mov    0x8(%ebp),%ebx
+  acquire(&ptable.lock);
+ 93a:	68 00 00 00 00       	push   $0x0
+ 93f:	e8 fc ff ff ff       	call   940 <wakeup+0x10>
+ 944:	83 c4 10             	add    $0x10,%esp
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+ 947:	b8 34 00 00 00       	mov    $0x34,%eax
+ 94c:	eb 0c                	jmp    95a <wakeup+0x2a>
+ 94e:	66 90                	xchg   %ax,%ax
+ 950:	83 c0 7c             	add    $0x7c,%eax
+ 953:	3d 34 1f 00 00       	cmp    $0x1f34,%eax
+ 958:	73 1c                	jae    976 <wakeup+0x46>
+    if(p->state == SLEEPING && p->chan == chan)
+ 95a:	83 78 0c 02          	cmpl   $0x2,0xc(%eax)
+ 95e:	75 f0                	jne    950 <wakeup+0x20>
+ 960:	3b 58 20             	cmp    0x20(%eax),%ebx
+ 963:	75 eb                	jne    950 <wakeup+0x20>
+      p->state = RUNNABLE;
+ 965:	c7 40 0c 03 00 00 00 	movl   $0x3,0xc(%eax)
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+ 96c:	83 c0 7c             	add    $0x7c,%eax
+ 96f:	3d 34 1f 00 00       	cmp    $0x1f34,%eax
+ 974:	72 e4                	jb     95a <wakeup+0x2a>
+  wakeup1(chan);
+  release(&ptable.lock);
+ 976:	c7 45 08 00 00 00 00 	movl   $0x0,0x8(%ebp)
+}
+ 97d:	8b 5d fc             	mov    -0x4(%ebp),%ebx
+ 980:	c9                   	leave  
+  release(&ptable.lock);
+ 981:	e9 fc ff ff ff       	jmp    982 <wakeup+0x52>
+ 986:	8d 76 00             	lea    0x0(%esi),%esi
+ 989:	8d bc 27 00 00 00 00 	lea    0x0(%edi,%eiz,1),%edi
+
+00000990 <kill>:
+// Kill the process with the given pid.
+// Process won't exit until it returns
+// to user space (see trap in trap.c).
+int
+kill(int pid)
+{
+ 990:	55                   	push   %ebp
+ 991:	89 e5                	mov    %esp,%ebp
+ 993:	53                   	push   %ebx
+ 994:	83 ec 10             	sub    $0x10,%esp
+ 997:	8b 5d 08             	mov    0x8(%ebp),%ebx
+  struct proc *p;
+
+  acquire(&ptable.lock);
+ 99a:	68 00 00 00 00       	push   $0x0
+ 99f:	e8 fc ff ff ff       	call   9a0 <kill+0x10>
+ 9a4:	83 c4 10             	add    $0x10,%esp
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+ 9a7:	b8 34 00 00 00       	mov    $0x34,%eax
+ 9ac:	eb 0c                	jmp    9ba <kill+0x2a>
+ 9ae:	66 90                	xchg   %ax,%ax
+ 9b0:	83 c0 7c             	add    $0x7c,%eax
+ 9b3:	3d 34 1f 00 00       	cmp    $0x1f34,%eax
+ 9b8:	73 36                	jae    9f0 <kill+0x60>
+    if(p->pid == pid){
+ 9ba:	39 58 10             	cmp    %ebx,0x10(%eax)
+ 9bd:	75 f1                	jne    9b0 <kill+0x20>
+      p->killed = 1;
+      // Wake process from sleep if necessary.
+      if(p->state == SLEEPING)
+ 9bf:	83 78 0c 02          	cmpl   $0x2,0xc(%eax)
+      p->killed = 1;
+ 9c3:	c7 40 24 01 00 00 00 	movl   $0x1,0x24(%eax)
+      if(p->state == SLEEPING)
+ 9ca:	75 07                	jne    9d3 <kill+0x43>
+        p->state = RUNNABLE;
+ 9cc:	c7 40 0c 03 00 00 00 	movl   $0x3,0xc(%eax)
+      release(&ptable.lock);
+ 9d3:	83 ec 0c             	sub    $0xc,%esp
+ 9d6:	68 00 00 00 00       	push   $0x0
+ 9db:	e8 fc ff ff ff       	call   9dc <kill+0x4c>
+      return 0;
+ 9e0:	83 c4 10             	add    $0x10,%esp
+ 9e3:	31 c0                	xor    %eax,%eax
+    }
+  }
+  release(&ptable.lock);
+  return -1;
+}
+ 9e5:	8b 5d fc             	mov    -0x4(%ebp),%ebx
+ 9e8:	c9                   	leave  
+ 9e9:	c3                   	ret    
+ 9ea:	8d b6 00 00 00 00    	lea    0x0(%esi),%esi
+  release(&ptable.lock);
+ 9f0:	83 ec 0c             	sub    $0xc,%esp
+ 9f3:	68 00 00 00 00       	push   $0x0
+ 9f8:	e8 fc ff ff ff       	call   9f9 <kill+0x69>
+  return -1;
+ 9fd:	83 c4 10             	add    $0x10,%esp
+ a00:	b8 ff ff ff ff       	mov    $0xffffffff,%eax
+}
+ a05:	8b 5d fc             	mov    -0x4(%ebp),%ebx
+ a08:	c9                   	leave  
+ a09:	c3                   	ret    
+ a0a:	8d b6 00 00 00 00    	lea    0x0(%esi),%esi
+
+00000a10 <procdump>:
+// Print a process listing to console.  For debugging.
+// Runs when user types ^P on console.
+// No lock to avoid wedging a stuck machine further.
+void
+procdump(void)
+{
+ a10:	55                   	push   %ebp
+ a11:	89 e5                	mov    %esp,%ebp
+ a13:	57                   	push   %edi
+ a14:	56                   	push   %esi
+ a15:	53                   	push   %ebx
+ a16:	8d 75 e8             	lea    -0x18(%ebp),%esi
+  int i;
+  struct proc *p;
+  char *state;
+  uint pc[10];
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+ a19:	bb 34 00 00 00       	mov    $0x34,%ebx
+{
+ a1e:	83 ec 3c             	sub    $0x3c,%esp
+ a21:	eb 24                	jmp    a47 <procdump+0x37>
+ a23:	90                   	nop
+ a24:	8d 74 26 00          	lea    0x0(%esi,%eiz,1),%esi
+    if(p->state == SLEEPING){
+      getcallerpcs((uint*)p->context->ebp+2, pc);
+      for(i=0; i<10 && pc[i] != 0; i++)
+        cprintf(" %p", pc[i]);
+    }
+    cprintf("\n");
+ a28:	83 ec 0c             	sub    $0xc,%esp
+ a2b:	68 b8 00 00 00       	push   $0xb8
+ a30:	e8 fc ff ff ff       	call   a31 <procdump+0x21>
+ a35:	83 c4 10             	add    $0x10,%esp
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+ a38:	83 c3 7c             	add    $0x7c,%ebx
+ a3b:	81 fb 34 1f 00 00    	cmp    $0x1f34,%ebx
+ a41:	0f 83 81 00 00 00    	jae    ac8 <procdump+0xb8>
+    if(p->state == UNUSED)
+ a47:	8b 43 0c             	mov    0xc(%ebx),%eax
+ a4a:	85 c0                	test   %eax,%eax
+ a4c:	74 ea                	je     a38 <procdump+0x28>
+    if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
+ a4e:	83 f8 05             	cmp    $0x5,%eax
+      state = "???";
+ a51:	ba ab 00 00 00       	mov    $0xab,%edx
+    if(p->state >= 0 && p->state < NELEM(states) && states[p->state])
+ a56:	77 11                	ja     a69 <procdump+0x59>
+ a58:	8b 14 85 00 00 00 00 	mov    0x0(,%eax,4),%edx
+      state = "???";
+ a5f:	b8 ab 00 00 00       	mov    $0xab,%eax
+ a64:	85 d2                	test   %edx,%edx
+ a66:	0f 44 d0             	cmove  %eax,%edx
+    cprintf("%d %s %s", p->pid, state, p->name);
+ a69:	8d 43 6c             	lea    0x6c(%ebx),%eax
+ a6c:	50                   	push   %eax
+ a6d:	52                   	push   %edx
+ a6e:	ff 73 10             	pushl  0x10(%ebx)
+ a71:	68 af 00 00 00       	push   $0xaf
+ a76:	e8 fc ff ff ff       	call   a77 <procdump+0x67>
+    if(p->state == SLEEPING){
+ a7b:	83 c4 10             	add    $0x10,%esp
+ a7e:	83 7b 0c 02          	cmpl   $0x2,0xc(%ebx)
+ a82:	75 a4                	jne    a28 <procdump+0x18>
+      getcallerpcs((uint*)p->context->ebp+2, pc);
+ a84:	8d 45 c0             	lea    -0x40(%ebp),%eax
+ a87:	83 ec 08             	sub    $0x8,%esp
+ a8a:	8d 7d c0             	lea    -0x40(%ebp),%edi
+ a8d:	50                   	push   %eax
+ a8e:	8b 43 1c             	mov    0x1c(%ebx),%eax
+ a91:	8b 40 0c             	mov    0xc(%eax),%eax
+ a94:	83 c0 08             	add    $0x8,%eax
+ a97:	50                   	push   %eax
+ a98:	e8 fc ff ff ff       	call   a99 <procdump+0x89>
+ a9d:	83 c4 10             	add    $0x10,%esp
+      for(i=0; i<10 && pc[i] != 0; i++)
+ aa0:	8b 17                	mov    (%edi),%edx
+ aa2:	85 d2                	test   %edx,%edx
+ aa4:	74 82                	je     a28 <procdump+0x18>
+        cprintf(" %p", pc[i]);
+ aa6:	83 ec 08             	sub    $0x8,%esp
+ aa9:	83 c7 04             	add    $0x4,%edi
+ aac:	52                   	push   %edx
+ aad:	68 ba 00 00 00       	push   $0xba
+ ab2:	e8 fc ff ff ff       	call   ab3 <procdump+0xa3>
+      for(i=0; i<10 && pc[i] != 0; i++)
+ ab7:	83 c4 10             	add    $0x10,%esp
+ aba:	39 fe                	cmp    %edi,%esi
+ abc:	75 e2                	jne    aa0 <procdump+0x90>
+ abe:	e9 65 ff ff ff       	jmp    a28 <procdump+0x18>
+ ac3:	90                   	nop
+ ac4:	8d 74 26 00          	lea    0x0(%esi,%eiz,1),%esi
+  }
+}
+ ac8:	8d 65 f4             	lea    -0xc(%ebp),%esp
+ acb:	5b                   	pop    %ebx
+ acc:	5e                   	pop    %esi
+ acd:	5f                   	pop    %edi
+ ace:	5d                   	pop    %ebp
+ acf:	c3                   	ret    
+
+00000ad0 <getppid>:
+
+int
+getppid(void)
+{
+ ad0:	55                   	push   %ebp
+ ad1:	89 e5                	mov    %esp,%ebp
+ ad3:	53                   	push   %ebx
+ ad4:	83 ec 04             	sub    $0x4,%esp
+  pushcli();
+ ad7:	e8 fc ff ff ff       	call   ad8 <getppid+0x8>
+  c = mycpu();
+ adc:	e8 fc ff ff ff       	call   add <getppid+0xd>
+  p = c->proc;
+ ae1:	8b 98 ac 00 00 00    	mov    0xac(%eax),%ebx
+  popcli();
+ ae7:	e8 fc ff ff ff       	call   ae8 <getppid+0x18>
+    return myproc()->parent->pid;
+ aec:	8b 43 14             	mov    0x14(%ebx),%eax
+ aef:	8b 40 10             	mov    0x10(%eax),%eax
+}
+ af2:	83 c4 04             	add    $0x4,%esp
+ af5:	5b                   	pop    %ebx
+ af6:	5d                   	pop    %ebp
+ af7:	c3                   	ret    
