@@ -842,14 +842,6 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
 
   np->pgdir = curproc->pgdir;
 
-  /*
-  if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
-    kfree(np->kstack);
-    np->kstack = UNUSED;
-    return -1;
-  }
-  */
-
   sz = curproc->sz;
   pgdir = curproc->pgdir;
 
