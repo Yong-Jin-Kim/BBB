@@ -227,9 +227,7 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
-  p->num_thread  = 0; // 0 threads exist
-  p->proc_true = 1;
-  p->t_history = 0; // no threads made yet
+  p->is_thread = 0;
   p->mlfqlev = 2;
   return p;
 }
@@ -347,8 +345,6 @@ fork(void)
 
   // basic variables for thread
   //np->num_thread  = 0; // 0 threads exist
-  np->active_thread = 0; // this might be confusing but this should be done
-  np->t_chan = -1; // sleeping on nothing
   //np->proc_true = 1; // mother proc is running! not thread
 
   //np->pass        = 0;
@@ -574,8 +570,11 @@ scheduler(void)
         // to release ptable.lock and then reacquire it
         // before jumping back to us.
         c->proc = p;
-        switchuvm(p);
-	
+	switchuvm(p);
+	p->state = RUNNING; // Where process becomes RUNNING
+	swtch(&(c->scheduler), p->context);
+
+	/*
 	// CORE
 	if(p->num_thread == 0) {
 	  hot = 0;
@@ -624,6 +623,7 @@ scheduler(void)
 	  }
 	  ///// ^^
 	}
+	*/
 	
 	switchkvm();
 
@@ -703,11 +703,7 @@ sched(void)
   //if(p->num_thread == 0) {
   //  swtch(&p->context, mycpu()->scheduler);
   //} else {
-    if(p->proc_true == 1) {
-      swtch(&p->context, mycpu()->scheduler);
-    } else {
-      swtch(&p->t_context[p->active_thread], mycpu()->scheduler);
-    }
+  swtch(&p->context, mycpu()->scheduler);
   //}
   mycpu()->intena = intena;
 }
@@ -833,29 +829,72 @@ kill(int pid)
 int
 thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
 {
-  return fork()?0:1;
+  int i;
+  uint sz, sp;
+  uint ustack[2];
+  pde_t *pgdir;
+  struct proc *np;
+  struct proc *curproc = myproc();
+
+  if((np = allocproc()) == 0){
+    return -1;
+  }
+
+  np->pgdir = curproc->pgdir;
+
+  /*
+  if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
+    kfree(np->kstack);
+    np->kstack = UNUSED;
+    return -1;
+  }
+  */
+
+  sz = curproc->sz;
+  pgdir = curproc->pgdir;
+
+  if((sz = allocuvm(pgdir, sz, sz + 2 * PGSIZE)) == 0) return -1;
+  clearpteu(pgdir, (char*)(sz - 2*PGSIZE));
+
+  sp = sz;
+  sp -= 2*sizeof(uint);
+  ustack[0] = 0xffffffff;
+  ustack[1] = (uint)arg;
+  if(copyout(pgdir, sp, ustack, 2*sizeof(uint))) return -1;
+  
+  curproc->pgdir = pgdir;
+  curproc->sz = sz;
+
+  np->sz = curproc->sz;
+  np->parent = curproc;
+  *np->tf = *curproc->tf;
+
+  np->tf->eip = (uint)start_routine;
+  np->tf->esp = sp;
+
+  np->tf->eax = 0;
+
+  for(i = 0; i < NOFILE; i++)
+    if(curproc->ofile[i])
+      np->ofile[i] = filedup(curproc->ofile[i]);
+  np->cwd = idup(curproc->cwd);
+
+  safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+
+  acquire(&ptable.lock);
+
+  np->state = RUNNABLE;
+  np->is_thread = 1;
+
+  release(&ptable.lock);
+
+  return 0;
 }
 
 void
 thread_exit(void *retval)
 {
-  //pushcli();
-  struct proc *curproc = myproc();
-
-  if(curproc->proc_true == 1)
-    panic("thread exiting when proc");
-  //cprintf("                                      exit %d\n", curproc->active_thread);
-  curproc->dyingmessage[curproc->active_thread] = retval;
-  
-  curproc->t_state[curproc->active_thread] = ZOMBIE;
-  if(curproc->t_chan == curproc->active_thread) {
-    curproc->t_chan = -1;
-  }
-  //curproc->active_thread++;
-  //curproc->num_thread--;
-  //acquire(&ptable.lock);
-  //popcli();
-  yield();
+  exit();
 }
 
 int

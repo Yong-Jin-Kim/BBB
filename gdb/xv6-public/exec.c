@@ -102,34 +102,6 @@ exec(char *path, char **argv)
   switchuvm(curproc);
   freevm(oldpgdir);
 
-  /*
-  cprintf("edi %d\n", curproc->tf->edi);
-  cprintf("esi %d\n", curproc->tf->esi);
-  cprintf("ebp %d\n", curproc->tf->ebp);
-  cprintf("oesp %d\n", curproc->tf->oesp);
-  cprintf("ebx %d\n", curproc->tf->ebx);
-  cprintf("edx %d\n", curproc->tf->edx);
-  cprintf("ecx %d\n", curproc->tf->ecx);
-  cprintf("eax %d\n", curproc->tf->eax);
-  cprintf("gs %d\n", curproc->tf->gs);
-  cprintf("padding1 %d\n", curproc->tf->padding1);
-  cprintf("fs %d\n", curproc->tf->fs);
-  cprintf("padding2 %d\n", curproc->tf->padding2);
-  cprintf("es %d\n", curproc->tf->es);
-  cprintf("padding3 %d\n", curproc->tf->padding3);
-  cprintf("ds %d\n", curproc->tf->ds);
-  cprintf("padding4 %d\n", curproc->tf->padding4);
-  cprintf("trapno %d\n", curproc->tf->trapno);
-  cprintf("err %d\n", curproc->tf->err);
-  cprintf("eip %d\n", curproc->tf->eip);
-  cprintf("cs %d\n", curproc->tf->cs);
-  cprintf("padding5 %d\n", curproc->tf->padding5);
-  cprintf("eflags %d\n", curproc->tf->eflags);
-  cprintf("esp %d\n", curproc->tf->esp);
-  cprintf("ss %d\n", curproc->tf->ss);
-  cprintf("padding6 %d\n", curproc->tf->padding6);
-  */
-
   return 0;
 
  bad:

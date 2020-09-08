@@ -73,24 +73,8 @@ struct proc {
   int is_stride;		// Identifier
   int share;			// Share
 
-  // Thread //////////////////////////////////////////////////////////////
-  uint t_history;		// Till what number is the thread created?
-  uint t_sz_accumulative;	// keep track of the actual total size;
-  uint t_sz[NTHREAD];	// for moving thread ustack
-  enum procstate t_state[NTHREAD];  // keep thread state here?
-  char *t_kstack[NTHREAD]; // thread kstack
-  // char *t_ustack[NTHREAD]; // no need
-  struct trapframe *t_tf[NTHREAD];
-  struct context *t_context[NTHREAD];
-  uint old_sz;
-
-  void *stack;
-
-  // thread run
-  int proc_true; // if it is proc that is running
-  int num_thread; // initialized with zero
-  int active_thread;
-  uint t_chan; // thread sleeps on this, -1 if sleeping on nothing
+  // Thread
+  int is_thread;
 
   // thread's dying message
   void *dyingmessage[NTHREAD];
