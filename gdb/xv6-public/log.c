@@ -156,8 +156,8 @@ end_op(void)
   // cprintf("OUTSTANDING %d\n", log.outstanding);
   if(log.committing)
     panic("log.committing");
-  //if(log.outstanding == 0){ // ORIGINAL
-  if(log.lh.n >= NBUF - MAXOPBLOCKS){ // newly
+  if(log.outstanding == 0){ // ORIGINAL
+  //if(log.lh.n >= NBUF - MAXOPBLOCKS){ // newly
     //cprintf("!NO MORE FSuse?\n");
     do_commit = 1;
     log.committing = 1;
@@ -196,20 +196,6 @@ write_log(void)
     brelse(from);
     brelse(to);
   }
-}
-
-// sync for system call
-void
-sync()
-{
-  commit();
-}
-
-// return log.lh.n value
-int
-get_log_num(void)
-{
-  return log.lh.n;
 }
 
 static void

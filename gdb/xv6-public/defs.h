@@ -34,10 +34,6 @@ int             fileread(struct file*, char*, int n);
 int             filestat(struct file*, struct stat*);
 int             filewrite(struct file*, char*, int n);
 
-// milestone 2
-int		filepread(struct file*, char*, int n, int off);
-int		filepwrite(struct file*, char*, int n, int off);
-
 // fs.c
 void            readsb(int dev, struct superblock *sb);
 int             dirlink(struct inode*, char*, uint);
@@ -90,8 +86,6 @@ void            initlog(int dev);
 void            log_write(struct buf*);
 void            begin_op();
 void            end_op();
-void		sync();
-int		get_log_num(void);
 
 // mp.c
 extern int      ismp;

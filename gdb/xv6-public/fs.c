@@ -373,9 +373,9 @@ static uint
 bmap(struct inode *ip, uint bn)
 {
   uint addr, *a;
-  struct buf *bp, *bp1, *bp2;
-  uint quotient1, remainder1; // double indirect
-  uint quotient2_1, quotient2_2, remainder2; // triple indirect
+  struct buf *bp; //, *bp1, *bp2;
+  //uint quotient1, remainder1; // double indirect
+  //uint quotient2_1, quotient2_2, remainder2; // triple indirect
 
   if(bn < NDIRECT){
     if((addr = ip->addrs[bn]) == 0)
@@ -399,6 +399,8 @@ bmap(struct inode *ip, uint bn)
     brelse(bp);
     return addr;
   }
+
+  /*
   bn -= NINDIRECT;
 
   // Double indirect
@@ -461,6 +463,7 @@ bmap(struct inode *ip, uint bn)
     // cprintf("addr: %d\n", addr);
     return addr;
   }
+  */
 
   panic("bmap: out of range");
 }
@@ -473,10 +476,10 @@ bmap(struct inode *ip, uint bn)
 static void
 itrunc(struct inode *ip)
 {
-  int i, j, k; // k for triple indirect
+  int i, j; //, k; // k for triple indirect
   struct buf *bp;
-  struct buf *bp1, *bp2, *bp3; // for double and triple
-  uint *a, *b, *c; // b for double indirect, c for triple indirect
+  //struct buf *bp1, *bp2, *bp3; // for double and triple
+  uint *a; //, *b, *c; // b for double indirect, c for triple indirect
 
   for(i = 0; i < NDIRECT; i++){
     if(ip->addrs[i]){
@@ -500,6 +503,7 @@ itrunc(struct inode *ip)
     ip->addrs[NDIRECT] = 0;
   }
 
+  /*
   // double indirect
   if(ip->addrs[NINDIRECT]){
     bp1 = bread(ip->dev, ip->addrs[NINDIRECT]);
@@ -556,6 +560,7 @@ itrunc(struct inode *ip)
     bfree(ip->dev, ip->addrs[NDINDIRECT]);
     ip->addrs[NDINDIRECT] = 0;
   }
+  */
 
   ip->size = 0;
   iupdate(ip);
