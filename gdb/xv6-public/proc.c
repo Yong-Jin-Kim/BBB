@@ -188,14 +188,17 @@ myproc(void) {
 static struct proc*
 allocproc(void)
 {
+  int index = 0;
   struct proc *p;
   char *sp;
 
   acquire(&ptable.lock);
 
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
     if(p->state == UNUSED)
       goto found;
+    index++;
+  }
 
   release(&ptable.lock);
   return 0;
@@ -227,6 +230,7 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
+  p->index = index;
   p->is_thread = 0;
   p->mlfqlev = 2;
   return p;
@@ -531,9 +535,12 @@ scheduler(void)
       // MLFQ PART
       if(num_stride > 0) 
         empty_mlfq = ticks;
+      
       // the loop
       for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-        if(p->state != RUNNABLE) {
+        
+	// inside
+	if(p->state != RUNNABLE) {
 	  if(p == &ptable.proc[NPROC]){
 	    if(num_stride > 0)
 	      while(ticks == empty_mlfq);
@@ -573,58 +580,6 @@ scheduler(void)
 	switchuvm(p);
 	p->state = RUNNING; // Where process becomes RUNNING
 	swtch(&(c->scheduler), p->context);
-
-	/*
-	// CORE
-	if(p->num_thread == 0) {
-	  hot = 0;
-	  p->proc_true = 1;
-	  p->state = RUNNING; // Where process becomes RUNNING
-	  swtch(&(c->scheduler), p->context);
-	} else {
-	  ///// ^^
-	  while(local_ticks > 0) {
-	    hot = 1;
-	    int temp = p->active_thread;
-	    for(; p->t_state[p->active_thread] != RUNNABLE && p->active_thread < p->t_history; p->active_thread++);
-	    if(p->t_state[p->active_thread] == RUNNABLE) {
-	      if(p->proc_true == 1) p->proc_true = 0;
-	      else p->t_state[temp] = RUNNABLE;
-	      p->state = RUNNING;
-	      p->t_state[p->active_thread] = RUNNING;
-	      //cprintf("into thread %d\n", p->active_thread);
-	      swtch(&(c->scheduler), p->t_context[p->active_thread]);
-	    } else if(p->active_thread == p->t_history) {
-	      p->active_thread = 0;
-	      if(p->t_chan == -1) {
-		if(p->proc_true != 1) {
-		  p->t_state[temp] = RUNNABLE;
-		}
-		p->proc_true = 1;
-		p->state = RUNNING;
-		cprintf("into proc\n");
-		swtch(&(c->scheduler), p->context);
-	      } else {
-		for(; p->t_state[p->active_thread] != RUNNABLE && p->active_thread < p->t_history; p->active_thread++);
-		if(p->t_state[p->active_thread] == RUNNABLE) {
-		  if(p->proc_true == 1) p->proc_true = 0;
-		  else p->t_state[temp] = RUNNABLE;
-		  p->state = RUNNING;
-		  p->t_state[p->active_thread] = RUNNING;
-		  //cprintf("into thread %d\n", p->active_thread);
-		  swtch(&(c->scheduler), p->t_context[p->active_thread]);
-		} else {
-		  panic("thread deadlock");
-		}
-	      }
-	    } else {
-	      panic("thread schedule");
-	    }
-	  }
-	  ///// ^^
-	}
-	*/
-	
 	switchkvm();
 
         p->stampout = stamp();
@@ -695,8 +650,8 @@ sched(void)
     panic("sched ptable.lock");
   if(mycpu()->ncli != 1)
     panic("sched locks");
-  if(p->state == RUNNING)
-    panic("sched running");
+  //if(p->state == RUNNING)
+  //  panic("sched running");
   if(readeflags()&FL_IF)
     panic("sched interruptible");
   intena = mycpu()->intena;
@@ -840,8 +795,6 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
     return -1;
   }
 
-  np->pgdir = curproc->pgdir;
-
   sz = curproc->sz;
   pgdir = curproc->pgdir;
 
@@ -856,6 +809,8 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
   
   curproc->pgdir = pgdir;
   curproc->sz = sz;
+  
+  np->pgdir = curproc->pgdir;
 
   np->sz = curproc->sz;
   np->parent = curproc;
@@ -877,6 +832,7 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
 
   np->state = RUNNABLE;
   np->is_thread = 1;
+  *thread = np->index;
 
   release(&ptable.lock);
 
@@ -886,14 +842,14 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
 void
 thread_exit(void *retval)
 {
-  exit();
+  struct proc *p = myproc();
+  p->state = ZOMBIE;
+  yield();
 }
 
 int
 thread_join(thread_t thread, void **retval)
 {
-  //cprintf("join called\n");
-  //struct proc *curproc = myproc();
   return wait()?0:1;
 }
 
