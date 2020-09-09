@@ -577,6 +577,7 @@ scheduler(void)
         // to release ptable.lock and then reacquire it
         // before jumping back to us.
         c->proc = p;
+	if(p->is_thread == 1) cprintf("is a thread %d\n", p->pid);
 	switchuvm(p);
 	p->state = RUNNING; // Where process becomes RUNNING
 	swtch(&(c->scheduler), p->context);
@@ -650,8 +651,8 @@ sched(void)
     panic("sched ptable.lock");
   if(mycpu()->ncli != 1)
     panic("sched locks");
-  //if(p->state == RUNNING)
-  //  panic("sched running");
+  if(p->state == RUNNING)
+    panic("sched running");
   if(readeflags()&FL_IF)
     panic("sched interruptible");
   intena = mycpu()->intena;
@@ -790,11 +791,13 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
   pde_t *pgdir;
   struct proc *np;
   struct proc *curproc = myproc();
-
+  
   if((np = allocproc()) == 0){
     return -1;
   }
 
+  acquire(&ptable.lock);
+  
   sz = curproc->sz;
   pgdir = curproc->pgdir;
 
@@ -821,6 +824,7 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
 
   np->tf->eax = 0;
 
+  // if there isn't this procedure, cannot print
   for(i = 0; i < NOFILE; i++)
     if(curproc->ofile[i])
       np->ofile[i] = filedup(curproc->ofile[i]);
@@ -828,11 +832,9 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
 
   safestrcpy(np->name, curproc->name, sizeof(curproc->name));
 
-  acquire(&ptable.lock);
-
   np->state = RUNNABLE;
   np->is_thread = 1;
-  *thread = np->index;
+  *thread = np->pid;
 
   release(&ptable.lock);
 
@@ -842,15 +844,40 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
 void
 thread_exit(void *retval)
 {
-  struct proc *p = myproc();
-  p->state = ZOMBIE;
-  yield();
+  acquire(&ptable.lock);
+  struct proc *curproc = myproc();
+  if(curproc->is_thread != 1) panic("non-thread thread_exiting");
+  curproc->state = ZOMBIE;
+  curproc->parent->state = RUNNABLE;
+  if(!holding(&ptable.lock))
+    panic("sched ptable.lock");
+  if(mycpu()->ncli != 1)
+    panic("sched locks");
+  if(readeflags()&FL_IF)
+    panic("sched interruptible");
+  swtch(&curproc->context, mycpu()->scheduler);
+  panic("THIS SHOULDN'T");
 }
 
 int
 thread_join(thread_t thread, void **retval)
 {
-  return wait()?0:1;
+  struct proc *p;
+  /*
+  int pid;
+  struct proc *curproc = myproc();
+
+  */
+  acquire(&ptable.lock);
+  for(;;){
+    cprintf("<sleeping for %d>\n", thread);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+      if(p->pid == thread)
+	break;
+    if(p->state == ZOMBIE)
+      cprintf("thread termination confirmed\n");
+    sleep(myproc(), &ptable.lock);
+  }
 }
 
 //PAGEBREAK: 36
