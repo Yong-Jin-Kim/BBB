@@ -188,17 +188,14 @@ myproc(void) {
 static struct proc*
 allocproc(void)
 {
-  int index = 0;
   struct proc *p;
   char *sp;
 
   acquire(&ptable.lock);
 
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == UNUSED)
       goto found;
-    index++;
-  }
 
   release(&ptable.lock);
   return 0;
@@ -230,7 +227,6 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
-  p->index = index;
   p->is_thread = 0;
   p->num_thread = 0;
   p->mlfqlev = 2;
