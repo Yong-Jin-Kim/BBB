@@ -232,6 +232,7 @@ found:
 
   p->index = index;
   p->is_thread = 0;
+  p->num_thread = 0;
   p->mlfqlev = 2;
   return p;
 }
@@ -840,6 +841,7 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
 
   release(&ptable.lock);
 
+  curproc->num_thread++;
   return 0;
 }
 
