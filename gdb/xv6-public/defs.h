@@ -175,7 +175,6 @@ void            timerinit(void);
 void            idtinit(void);
 extern uint     ticks;
 extern volatile int local_ticks;
-extern volatile int hot;
 void            tvinit(void);
 extern struct spinlock tickslock;
 

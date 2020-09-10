@@ -14,7 +14,6 @@ extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
 uint ticks;
 volatile int local_ticks;
-volatile int hot;
 
 void
 tvinit(void)
@@ -131,8 +130,6 @@ trap(struct trapframe *tf)
     if(local_ticks <= 0) {
       yield();
     } else {
-      if(hot)
-	yield();
     }
   }
 
