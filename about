@@ -24,3 +24,15 @@ THREAD
 - threads is a unit of execution flow, smaller than process, that share ADDRESS SPACE and CODE
 - since each threads can be of different states, "1 context, 1 trapframe and 1 stack" should be assigned to a thread
 - multithreading is fast because NO NEED TO FLUSH TLB
+
+------------------------------------------------------------------------------------------------------------------------
+
+use "struct proc" to save details of thread
+I MUST GROUP THE PROC AND HER CHILD THREADS
+AND LET THEM be SCHEDULED with locality of time
+
+...in order to prevent tlb flushing
+
+------------------------------------------------------------------------------------------------------------------------
+
+OSLAB
