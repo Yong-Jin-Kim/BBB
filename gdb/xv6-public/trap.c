@@ -70,7 +70,7 @@ trap(struct trapframe *tf)
 	}
       }
       local_ticks--;
-      //wakeup(&ticks);
+      wakeup(&ticks);
       release(&tickslock);
     }
     //if(ticks % 200 == 0) {

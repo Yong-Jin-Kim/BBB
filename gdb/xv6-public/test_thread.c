@@ -76,6 +76,7 @@ main(int argc, char *argv[])
     printf(1,"%d. %s finish\n", i, testname[i]);
     sleep(100);
   }
+  printf(1, "all test passed\n");
   exit();
 }
 
@@ -88,7 +89,7 @@ racingthreadmain(void *arg)
   int tid = (int) arg;
   int i;
   int tmp;
-  printf(1, "&&&&& %d\n", (uint)arg);
+  //printf(1, "&&&&& %d\n", (uint)arg);
   for (i = 0; i < 10000000; i++){
     tmp = gcnt;
     tmp++;
@@ -118,7 +119,7 @@ racingtest(void)
       return -1;
     }
   }
-  printf(1,"%d\n", gcnt);
+  //printf(1,"%d\n", gcnt);
   return 0;
 }
 
@@ -129,9 +130,6 @@ basicthreadmain(void *arg)
   int tid = (int) arg;
   int i;
   for (i = 0; i < 100000000; i++){
-    if (i % 20000000 == 0){
-      printf(1, "%d", tid);
-    }
   }
   thread_exit((void *)(tid+1));
 }
@@ -155,7 +153,6 @@ basictest(void)
       return -1;
     }
   }
-  printf(1,"\n");
   return 0;
 }
 
@@ -166,7 +163,6 @@ jointhreadmain(void *arg)
 {
   int val = (int)arg;
   sleep(200);
-  printf(1, "thread_exit...\n");
   thread_exit((void *)(val*2));
 }
 
@@ -183,14 +179,12 @@ jointest1(void)
       return -1;
     }
   }
-  printf(1, "thread_join!!!\n");
   for (i = 1; i <= NUM_THREAD; i++){
     if (thread_join(threads[i-1], &retval) != 0 || (int)retval != i * 2 ){
       printf(1, "panic at thread_join\n");
       return -1;
     }
   }
-  printf(1,"\n");
   return 0;
 }
 
@@ -208,14 +202,12 @@ jointest2(void)
     }
   }
   sleep(500);
-  printf(1, "thread_join!!!\n");
   for (i = 1; i <= NUM_THREAD; i++){
     if (thread_join(threads[i-1], &retval) != 0 || (int)retval != i * 2 ){
       printf(1, "panic at thread_join\n");
       return -1;
     }
   }
-  printf(1,"\n");
   return 0;
 }
 
@@ -236,8 +228,8 @@ stresstest(void)
   void *retval;
 
   for (n = 1; n <= nstress; n++){
-    if (n % 1000 == 0)
-      printf(1, "%d\n", n);
+    //if (n % 1000 == 0)
+    //  printf(1, "%d\n", n);
     for (i = 0; i < NUM_THREAD; i++){
       if (thread_create(&threads[i], stressthreadmain, (void*)i) != 0){
         printf(1, "panic at thread_create\n");
@@ -251,7 +243,6 @@ stresstest(void)
       }
     }
   }
-  printf(1, "\n");
   return 0;
 }
 

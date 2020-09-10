@@ -666,9 +666,9 @@ stridetest(void)
     printf(1, "panic at fork in forktest\n");
     exit();
   } else if (pid == 0){
-    cpu_share(2);
+    set_cpu_share(2);
   } else{
-    cpu_share(10);
+    set_cpu_share(10);
   }
 
   for (i = 0; i < NUM_THREAD; i++){

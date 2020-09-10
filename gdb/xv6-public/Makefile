@@ -191,6 +191,7 @@ UPROGS=\
 	_test_master\
 	_expipe\
 	_test_thread\
+	_test_thread2\
 	_test_abc\
 	_simple_thread\
 
@@ -265,7 +266,7 @@ EXTRA=\
 	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c zombie.c\
 	printf.c umalloc.c my_userapp.c test.c test_yield.c yongjin.c\
 	test_mlfq.c test_stride.c test_master.c simple_thread.c\
-	expipe.c test_thread.c test_abc.c\
+	expipe.c test_thread.c test_thread2.c test_abc.c\
 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl gdbutil\
 
