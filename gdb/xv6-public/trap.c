@@ -127,10 +127,8 @@ trap(struct trapframe *tf)
   if(myproc() && myproc()->state == RUNNING &&
      tf->trapno == T_IRQ0+IRQ_TIMER) {
     //cprintf("change\n");
-    if(local_ticks <= 0) {
+    if(local_ticks <= 0)
       yield();
-    } else {
-    }
   }
 
   // Check if the process has been killed since we yielded

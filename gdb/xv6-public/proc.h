@@ -65,24 +65,16 @@ struct proc {
   int allotment;		// allotment
   int stampin;			// timestamp, used to update runtime
   int stampout;			// timestamp, used to update runtime
-  // need to implement
-  int hitzone;			// Dangerous
-  int strike;			// STRIKE!!
 
   // Stride
   int is_stride;		// Identifier
   int share;			// Share
 
-  // Thread
+  // Thread support
   int is_thread;
   int num_thread;
   void *retval;
-
   int old_sz;
-
-  // thread's dying message
-  void *dyingmessage[NTHREAD];
-  // Thread //////////////////////////////////////////////////////////////
 
 };
 
