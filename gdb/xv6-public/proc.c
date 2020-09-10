@@ -834,10 +834,10 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
   np->state = RUNNABLE;
   np->is_thread = 1;
   *thread = np->pid;
+  curproc->num_thread++;
 
   release(&ptable.lock);
 
-  curproc->num_thread++;
   return 0;
 }
 
@@ -847,8 +847,12 @@ thread_exit(void *retval)
   acquire(&ptable.lock);
   struct proc *curproc = myproc();
   if(curproc->is_thread != 1) panic("non-thread thread_exiting");
+  
+  curproc->retval = retval;
   curproc->state = ZOMBIE;
+  curproc->parent->num_thread--;
   curproc->parent->state = RUNNABLE;
+  
   if(!holding(&ptable.lock))
     panic("sched ptable.lock");
   if(mycpu()->ncli != 1)
@@ -874,8 +878,12 @@ thread_join(thread_t thread, void **retval)
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
       if(p->pid == thread)
 	break;
-    if(p->state == ZOMBIE)
+    if(p->state == ZOMBIE) {
       cprintf("thread termination confirmed\n");
+      *retval = p->retval;
+      release(&ptable.lock);
+      return 0;
+    }
     sleep(myproc(), &ptable.lock);
   }
 }

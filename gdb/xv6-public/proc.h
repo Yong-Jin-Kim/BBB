@@ -76,6 +76,7 @@ struct proc {
   // Thread
   int is_thread;
   int num_thread;
+  void *retval;
 
   // thread's dying message
   void *dyingmessage[NTHREAD];
