@@ -73,7 +73,7 @@ boost(void) {
       p->hitzone = 0;
       p->strike = 0;
       //p->allotment = 50000000; FOR MLFQ + STRIDE
-      p->allotment = 200000000;
+      p->allotment = 20 * TICKSIZE;
       p->stampin = 0;
     }
   }
@@ -227,9 +227,12 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
+  p->mlfqlev = 2;
+  p->allotment   = 20 * TICKSIZE; // Also allotment for highest priority
+  
   p->is_thread = 0;
   p->num_thread = 0;
-  p->mlfqlev = 2;
+  
   return p;
 }
 
@@ -336,7 +339,6 @@ fork(void)
   // proc data -> deal with this
   np->state = RUNNABLE;
   //np->allotment = 50000000; FOR MLFQ + STRIDE
-  np->allotment   = 200000000; // Also allotment for highest priority
   np->stampin     = 0;
   np->stampout    = 0;
   np->hitzone     = 0;
@@ -478,7 +480,7 @@ scheduler(void)
     if(p->state == RUNNING || p->state == RUNNABLE) {
       p->mlfqlev = 2;
       //p->allotment = 50000000; FOR MLFQ + STRIDe
-      p->allotment = 200000000;
+      p->allotment = 20 * TICKSIZE;
     }
     else {
       p->mlfqlev = -2; // -1 for stride
@@ -586,7 +588,7 @@ scheduler(void)
 	if(p->allotment < 0 && p->mlfqlev == 2) {
 	  p->mlfqlev = 1;
 	  //p->allotment = 100000000; FOR MLFQ + STRIDE
-	  p->allotment = 400000000;
+	  p->allotment = 40 * TICKSIZE;
         }
         if(p->allotment < 0 && p->mlfqlev == 1) {
 	  p->mlfqlev = 0;

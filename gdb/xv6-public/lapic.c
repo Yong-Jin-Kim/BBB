@@ -70,7 +70,7 @@ lapicinit(void)
   lapicw(TIMER, PERIODIC | (T_IRQ0 + IRQ_TIMER));
 
   // implement local_ticks?
-  lapicw(TICR, 10000000); // for MLFQ + STRIDE
+  lapicw(TICR, TICKSIZE); // for MLFQ + STRIDE
   //lapicw(TICR, 50000000); // 1000 0000 by default, maximum is 42 9496 7295
 
   // Disable logical interrupt lines.
