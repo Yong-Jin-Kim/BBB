@@ -13,6 +13,7 @@ struct gatedesc idt[256];
 extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
 uint ticks;
+uint mlfq_ticks;
 volatile int local_ticks;
 
 void
@@ -52,30 +53,34 @@ trap(struct trapframe *tf)
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
+      mlfq_ticks++;
       if(local_ticks <= 0) {
-	switch(maxlev()) {
-	  case 2:
-	    local_ticks = 5;
-	    break;
-	  case 1:
-	    local_ticks = 10;
-	    break;
-	  case 0:
-	    local_ticks = 20;
-	    break;
-	  default:
-	    local_ticks = 5;
-	    break;
+	if(num_stride > 0) {
+	  local_ticks = 5;
+	} else {
+	  switch(maxlev()) {
+	    case 2:
+	      local_ticks = 5;
+	      break;
+	    case 1:
+	      local_ticks = 10;
+	      break;
+	    case 0:
+	      local_ticks = 20;
+	      break;
+	    default:
+	      local_ticks = 5;
+	      break;
+	  }
 	}
       }
       local_ticks--;
       wakeup(&ticks);
       release(&tickslock);
     }
-    //if(ticks % 200 == 0) {
-      //cprintf("boost\n");
-      //boost();
-    //} //FOR MLFQ + STRIDE
+    if(mlfq_ticks % 200 == 0) {
+      boost();
+    } //FOR MLFQ + STRIDE
     lapiceoi();
     break;
   case T_IRQ0 + IRQ_IDE:
@@ -127,6 +132,7 @@ trap(struct trapframe *tf)
   if(myproc() && myproc()->state == RUNNING &&
      tf->trapno == T_IRQ0+IRQ_TIMER) {
     //cprintf("change\n");
+    if(myproc()->is_stride == 1) mlfq_ticks--;
     if(local_ticks <= 0)
       yield();
   }

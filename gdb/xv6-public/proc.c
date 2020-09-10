@@ -70,8 +70,6 @@ boost(void) {
 	p->state == RUNNING ||
 	p->state == SLEEPING) {
       if(p->mlfqlev != -1) p->mlfqlev = 2;
-      p->hitzone = 0;
-      p->strike = 0;
       //p->allotment = 50000000; FOR MLFQ + STRIDE
       p->allotment = 20 * TICKSIZE;
       p->stampin = 0;
@@ -341,8 +339,7 @@ fork(void)
   //np->allotment = 50000000; FOR MLFQ + STRIDE
   np->stampin     = 0;
   np->stampout    = 0;
-  np->hitzone     = 0;
-  np->strike      = 0;
+  
   np->is_stride   = 0; // Cannot be stride process if newly forked
   np->share       = 0;
 
@@ -487,8 +484,6 @@ scheduler(void)
       p->allotment = 0; // 0 time for nonexisting process
     }
 
-    p->hitzone = 0;
-    p->strike = 0;
     p->stampin = 0;
     p->stampout = 0;
 
