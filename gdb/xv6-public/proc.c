@@ -824,19 +824,19 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
 
   np->tf->eip = (uint)start_routine;
   np->tf->esp = sp;
-
   np->tf->eax = 0;
 
-  // if there isn't this procedure, cannot print
+  // if there isn't this procedure, thread cannot printf
   for(i = 0; i < NOFILE; i++)
     if(curproc->ofile[i])
       np->ofile[i] = filedup(curproc->ofile[i]);
   np->cwd = idup(curproc->cwd);
-
   safestrcpy(np->name, curproc->name, sizeof(curproc->name));
 
   np->state = RUNNABLE;
   np->is_thread = 1;
+  np->mlfqlev = curproc->mlfqlev;
+
   *thread = np->pid;
   curproc->num_thread++;
 
