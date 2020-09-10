@@ -574,7 +574,7 @@ scheduler(void)
         // to release ptable.lock and then reacquire it
         // before jumping back to us.
         c->proc = p;
-	if(p->is_thread == 1) cprintf("is a thread %d\n", p->pid);
+	//if(p->is_thread == 1) cprintf("is a thread %d\n", p->pid);
 	switchuvm(p);
 	p->state = RUNNING; // Where process becomes RUNNING
 	swtch(&(c->scheduler), p->context);
@@ -794,7 +794,11 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
   }
 
   acquire(&ptable.lock);
-  
+
+  // for mess cleanup
+  if(curproc->num_thread == 0)
+    curproc->old_sz = curproc->sz;
+
   sz = curproc->sz;
   pgdir = curproc->pgdir;
 
@@ -866,21 +870,32 @@ thread_exit(void *retval)
 int
 thread_join(thread_t thread, void **retval)
 {
+  int sz;
   struct proc *p;
-  /*
-  int pid;
   struct proc *curproc = myproc();
-
-  */
+  
   acquire(&ptable.lock);
   for(;;){
-    cprintf("<sleeping for %d>\n", thread);
+    //cprintf("<sleeping for %d>\n", thread);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
       if(p->pid == thread)
 	break;
     if(p->state == ZOMBIE) {
-      cprintf("thread termination confirmed\n");
+      //cprintf("thread termination confirmed\n");
       *retval = p->retval;
+      kfree(p->kstack);
+      p->kstack = 0;
+      p->pid = 0;
+      p->parent = 0;
+      p->name[0] = 0;
+      p->killed = 0;
+      p->state = UNUSED;
+      if(curproc->num_thread == 0) {
+	//cprintf("no more threads left\n");
+	if((sz = deallocuvm(curproc->pgdir, curproc->sz, curproc->old_sz)) == 0)
+	  return -1;
+	curproc->sz = sz;
+      }
       release(&ptable.lock);
       return 0;
     }

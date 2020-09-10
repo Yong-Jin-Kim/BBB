@@ -78,6 +78,8 @@ struct proc {
   int num_thread;
   void *retval;
 
+  int old_sz;
+
   // thread's dying message
   void *dyingmessage[NTHREAD];
   // Thread //////////////////////////////////////////////////////////////
