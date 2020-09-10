@@ -814,7 +814,7 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
   curproc->pgdir = pgdir;
   curproc->sz = sz;
   
-  // ADDRESS SPACE SHARING///
+  // ADDRESS SPACE SHARING //
   np->pgdir = curproc->pgdir;
   ///////////////////////////
 
