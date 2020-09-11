@@ -850,7 +850,9 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
 
   np->state = RUNNABLE;
   np->is_thread = 1;
+  np->is_stride = curproc->is_stride;
   np->mlfqlev = curproc->mlfqlev;
+  np->share = curproc->share; 
   np->tgid = curproc->tgid;
 
   *thread = np->pid;
