@@ -616,13 +616,13 @@ scheduler(void)
         // COULD POSSIBLY RESULT ERROR
         if(p->is_stride) break;
 
-      } // for-moon inside mlfq
+      } // ptable for loop
 
     } else { // Stride process begins
       // procrun = 50000000; // Stride is for 1 tick by default
       // procrun = 10000000; FOR MLFQ + STRIDE
       // lapic[0x0380/4] = procrun;
-      if(local_ticks == 0) local_ticks = 5;
+      if(local_ticks <= 0) local_ticks = 5;
       p = stride_list[stride_index].proc;
 
       // don't use continue here
