@@ -63,8 +63,6 @@ struct proc {
   // MLFQ
   int mlfqlev;			// MLFQ level of the current process
   int allotment;		// allotment
-  int stampin;			// timestamp, used to update runtime
-  int stampout;			// timestamp, used to update runtime
 
   // Stride
   int is_stride;		// Identifier
@@ -75,6 +73,7 @@ struct proc {
   int num_thread;
   void *retval;
   int old_sz;
+  uint tgid; // thread group id, 0 if non thread related
 
 };
 

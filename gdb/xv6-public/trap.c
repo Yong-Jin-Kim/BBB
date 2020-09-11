@@ -54,6 +54,7 @@ trap(struct trapframe *tf)
       acquire(&tickslock);
       ticks++;
       mlfq_ticks++;
+      /*
       if(local_ticks <= 0) {
 	if(num_stride > 0) {
 	  local_ticks = 5;
@@ -74,6 +75,7 @@ trap(struct trapframe *tf)
 	  }
 	}
       }
+      */
       local_ticks--;
       wakeup(&ticks);
       release(&tickslock);
@@ -133,8 +135,13 @@ trap(struct trapframe *tf)
      tf->trapno == T_IRQ0+IRQ_TIMER) {
     //cprintf("change\n");
     if(myproc()->is_stride == 1) mlfq_ticks--;
-    if(local_ticks <= 0)
+    if(local_ticks <= 0) {
+      prev_tgid |= myproc()->tgid;
+      multithreading = 0;
       yield();
+    } else {
+      if(multithreading == 1) yield();
+    }
   }
 
   // Check if the process has been killed since we yielded

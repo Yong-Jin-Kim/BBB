@@ -24,10 +24,12 @@ struct {
 static struct proc *initproc;
 
 int nextpid = 1;
+uint next_tgid = 0x1; // next thread group id, used for bitwise operations
+volatile uint prev_tgid;
+volatile int multithreading = 0;
+
 extern void forkret(void);
 extern void trapret(void);
-extern void threadret(void);
-
 static void wakeup1(void *chan);
 
 void
@@ -72,7 +74,6 @@ boost(void) {
       if(p->mlfqlev != -1) p->mlfqlev = 2;
       //p->allotment = 50000000; FOR MLFQ + STRIDE
       p->allotment = 20 * TICKSIZE;
-      p->stampin = 0;
     }
   }
 }
@@ -226,10 +227,14 @@ found:
   p->context->eip = (uint)forkret;
 
   p->mlfqlev = 2;
-  p->allotment   = 20 * TICKSIZE; // Also allotment for highest priority
+  p->allotment = 20 * TICKSIZE; // Also allotment for highest priority
   
+  p->is_stride   = 0; // Cannot be stride process if newly forked
+  p->share       = 0;
+
   p->is_thread = 0;
   p->num_thread = 0;
+  p->tgid = 0;
   
   return p;
 }
@@ -334,21 +339,7 @@ fork(void)
 
   acquire(&ptable.lock);
 
-  // proc data -> deal with this
   np->state = RUNNABLE;
-  //np->allotment = 50000000; FOR MLFQ + STRIDE
-  np->stampin     = 0;
-  np->stampout    = 0;
-  
-  np->is_stride   = 0; // Cannot be stride process if newly forked
-  np->share       = 0;
-
-  // basic variables for thread
-  //np->num_thread  = 0; // 0 threads exist
-  //np->proc_true = 1; // mother proc is running! not thread
-
-  //np->pass        = 0;
-  //np->stride      = 0;
 
   release(&ptable.lock);
   return pid;
@@ -460,14 +451,14 @@ wait(void)
 void
 scheduler(void)
 {
-  struct proc *p;
+  struct proc *p, *q;
   struct cpu *c = mycpu();
   int procrun;
   int passthru;
   int stride_index;
+  int stampin, stampout;
   uint empty_mlfq;
-  //int rotate;
-  //int rotateMAX;
+  uint active_tgid = 0;
 
   local_ticks = 5;
   c->proc = 0;
@@ -483,9 +474,6 @@ scheduler(void)
       p->mlfqlev = -2; // -1 for stride
       p->allotment = 0; // 0 time for nonexisting process
     }
-
-    p->stampin = 0;
-    p->stampout = 0;
 
     p->is_stride = 0;
     p->share = 0;
@@ -530,6 +518,7 @@ scheduler(void)
       if(num_stride > 0) 
         empty_mlfq = ticks;
       
+      if(multithreading == 0) prev_tgid = 0;
       // the loop
       for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
         
@@ -542,11 +531,20 @@ scheduler(void)
           continue;
 	}
 
-        // Includes trashing stride processes too
-        if(p->mlfqlev != maxlev())
+	if(multithreading == 1) {
+	  if(p->tgid != active_tgid)
+	    continue;
+	}
+
+	if((prev_tgid & p->tgid) != 0)
 	  continue;
 
-	/*
+        // Includes trashing stride processes too
+	if(p->is_thread == 0) q = p;
+	else q = p->parent;
+        if(q->mlfqlev != maxlev())
+	  continue;
+
 	if(num_stride == 0) {
 	  switch(maxlev()) {
 	    case 2:
@@ -564,30 +562,46 @@ scheduler(void)
 	} else {
 	  local_ticks = 5;
 	}
-	*/
-        p->stampin = stamp();
+        
+	stampin = stamp();
 
         // Switch to chosen process.  It is the process's job
         // to release ptable.lock and then reacquire it
         // before jumping back to us.
         c->proc = p;
 	//if(p->is_thread == 1) cprintf("is a thread %d\n", p->pid);
-	switchuvm(p);
+	if(multithreading == 0) {
+	  switchuvm(p);
+	  if(p->tgid != 0) {
+	    active_tgid = p->tgid;
+	    multithreading = 1;
+	  }
+	} else {
+	  switchuvm_t(p);
+	}
 	p->state = RUNNING; // Where process becomes RUNNING
 	swtch(&(c->scheduler), p->context);
-	switchkvm();
+	if(multithreading == 0) switchkvm();
 
-        p->stampout = stamp();
-        procrun = (p->stampout - p->stampin)/2;
-	if(p->mlfqlev != 0) p->allotment -= procrun; // No need to deal with allotment in level 0
-	if(p->allotment < 0 && p->mlfqlev == 2) {
-	  p->mlfqlev = 1;
+        stampout = stamp();
+        procrun = (stampout - stampin)/2;
+	if(p->is_thread == 0) q = p;
+	else q = p->parent;
+	if(q->mlfqlev != 0) q->allotment -= procrun; // No need to deal with allotment in level 0
+	if(q->allotment < 0 && q->mlfqlev == 2) {
+	  q->mlfqlev = 1;
 	  //p->allotment = 100000000; FOR MLFQ + STRIDE
-	  p->allotment = 40 * TICKSIZE;
+	  q->allotment = 40 * TICKSIZE;
+	  prev_tgid |= q->tgid;
+	  multithreading = 0;
+	  switchkvm();
         }
-        if(p->allotment < 0 && p->mlfqlev == 1) {
-	  p->mlfqlev = 0;
-	  p->allotment = 0; // An Infinity
+        if(q->allotment < 0 && q->mlfqlev == 1) {
+	  q->mlfqlev = 0;
+	  q->allotment = 0; // An Infinity
+	  prev_tgid |= q->tgid;
+	  multithreading = 0;
+	  switchkvm();
         }
 
         // ULTIMATE DEBUGGER
@@ -603,6 +617,7 @@ scheduler(void)
         if(p->is_stride) break;
 
       } // for-moon inside mlfq
+
     } else { // Stride process begins
       // procrun = 50000000; // Stride is for 1 tick by default
       // procrun = 10000000; FOR MLFQ + STRIDE
@@ -793,8 +808,11 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
   acquire(&ptable.lock);
 
   // for mess cleanup
-  if(curproc->num_thread == 0)
+  if(curproc->num_thread == 0) {
     curproc->old_sz = curproc->sz;
+    curproc->tgid = next_tgid;
+    next_tgid = next_tgid << 1;
+  }
 
   sz = curproc->sz;
   pgdir = curproc->pgdir;
@@ -833,6 +851,7 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
   np->state = RUNNABLE;
   np->is_thread = 1;
   np->mlfqlev = curproc->mlfqlev;
+  np->tgid = curproc->tgid;
 
   *thread = np->pid;
   curproc->num_thread++;
@@ -851,7 +870,6 @@ thread_exit(void *retval)
   
   curproc->retval = retval;
   curproc->state = ZOMBIE;
-  curproc->parent->num_thread--;
   curproc->parent->state = RUNNABLE;
   
   if(!holding(&ptable.lock))
@@ -887,11 +905,14 @@ thread_join(thread_t thread, void **retval)
       p->name[0] = 0;
       p->killed = 0;
       p->state = UNUSED;
+      curproc->num_thread--;
       if(curproc->num_thread == 0) {
-	//cprintf("no more threads left\n");
+	cprintf("no more threads left\n");
 	if((sz = deallocuvm(curproc->pgdir, curproc->sz, curproc->old_sz)) == 0)
 	  return -1;
 	curproc->sz = sz;
+	curproc->tgid = 0;
+	multithreading = 0;
       }
       release(&ptable.lock);
       return 0;

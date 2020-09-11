@@ -105,6 +105,8 @@ int             pipewrite(struct pipe*, char*, int);
 // proc.c
 extern volatile int num_stride; // 0 if no stride process, 1 if stride process
 extern volatile int total_share; // to make exception possible
+extern volatile uint prev_tgid; // in order for trap usage
+extern volatile int multithreading;
 int             cpuid(void);
 void            exit(void);
 int             fork(void);
@@ -196,6 +198,7 @@ void            inituvm(pde_t*, char*, uint);
 int             loaduvm(pde_t*, char*, struct inode*, uint, uint);
 pde_t*          copyuvm(pde_t*, uint);
 void            switchuvm(struct proc*);
+void		switchuvm_t(struct proc*);
 void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
