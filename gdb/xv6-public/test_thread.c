@@ -228,8 +228,8 @@ stresstest(void)
   void *retval;
 
   for (n = 1; n <= nstress; n++){
-    //if (n % 1000 == 0)
-    //  printf(1, "%d\n", n);
+    if (n % 1000 == 0)
+      printf(1, "%d\n", n);
     for (i = 0; i < NUM_THREAD; i++){
       if (thread_create(&threads[i], stressthreadmain, (void*)i) != 0){
         printf(1, "panic at thread_create\n");

@@ -907,7 +907,7 @@ thread_join(thread_t thread, void **retval)
       p->state = UNUSED;
       curproc->num_thread--;
       if(curproc->num_thread == 0) {
-	cprintf("no more threads left\n");
+	//cprintf("no more threads left\n");
 	if((sz = deallocuvm(curproc->pgdir, curproc->sz, curproc->old_sz)) == 0)
 	  return -1;
 	curproc->sz = sz;
