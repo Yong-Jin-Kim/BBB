@@ -24,8 +24,7 @@ struct {
 static struct proc *initproc;
 
 int nextpid = 1;
-uint next_tgid = 0x1; // next thread group id, used for bitwise operations
-volatile uint prev_tgid;
+uint next_tgid = 1; // next thread group id, used for bitwise operations
 volatile int multithreading = 0;
 
 extern void forkret(void);
@@ -457,10 +456,11 @@ scheduler(void)
   int passthru;
   int stride_index;
   int stampin, stampout;
-  uint empty_mlfq;
-  uint active_tgid = 0;
+  uint empty_mlfq; // when in stride scheduling, if there is no mlfq's to run
+  //uint active_tgid;
+  //uint thread_ticks;
 
-  local_ticks = 5;
+  local_ticks = 5; // ???
   c->proc = 0;
 
   // Scheduler booting
@@ -518,7 +518,6 @@ scheduler(void)
       if(num_stride > 0) 
         empty_mlfq = ticks;
       
-      if(multithreading == 0) prev_tgid = 0;
       // the loop
       for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
         
@@ -531,18 +530,10 @@ scheduler(void)
           continue;
 	}
 
-	if(multithreading == 1) {
-	  if(p->tgid != active_tgid)
-	    continue;
-	}
-
-	if((prev_tgid & p->tgid) != 0)
+	if(p->is_thread == 1)
 	  continue;
 
-        // Includes trashing stride processes too
-	if(p->is_thread == 0) q = p;
-	else q = p->parent;
-        if(q->mlfqlev != maxlev())
+        if(p->mlfqlev != maxlev())
 	  continue;
 
 	if(num_stride == 0) {
@@ -569,18 +560,18 @@ scheduler(void)
         // to release ptable.lock and then reacquire it
         // before jumping back to us.
         c->proc = p;
-	//if(p->is_thread == 1) cprintf("is a thread %d\n", p->pid);
-	if(multithreading == 0) {
-	  switchuvm(p);
-	  if(p->tgid != 0) {
-	    active_tgid = p->tgid;
-	    multithreading = 1;
-	  }
-	} else {
-	  switchuvm_t(p);
-	}
-	p->state = RUNNING; // Where process becomes RUNNING
+	
+	if(p->is_thread == 1) cprintf("%d is a thread\n", p->pid);
+	switchuvm(p);
+	
+	switchuvm(p);
+	
+	///////////////////////////////////
+	// switchuvm_t(p);
+	p->state = RUNNING;
 	swtch(&(c->scheduler), p->context);
+	///////////////////////////////////
+
 	if(multithreading == 0) switchkvm();
 
         stampout = stamp();
@@ -592,14 +583,12 @@ scheduler(void)
 	  q->mlfqlev = 1;
 	  //p->allotment = 100000000; FOR MLFQ + STRIDE
 	  q->allotment = 40 * TICKSIZE;
-	  prev_tgid |= q->tgid;
 	  multithreading = 0;
 	  switchkvm();
         }
         if(q->allotment < 0 && q->mlfqlev == 1) {
 	  q->mlfqlev = 0;
 	  q->allotment = 0; // An Infinity
-	  prev_tgid |= q->tgid;
 	  multithreading = 0;
 	  switchkvm();
         }
@@ -629,7 +618,7 @@ scheduler(void)
       if(p->state == RUNNABLE) {
         c->proc = p;
 	switchuvm(p);
-        p->state = RUNNING;
+	p->state = RUNNING;
 	swtch(&(c->scheduler), p->context);
 	switchkvm();
 	c->proc = 0;

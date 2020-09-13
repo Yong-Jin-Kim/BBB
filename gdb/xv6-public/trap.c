@@ -135,8 +135,9 @@ trap(struct trapframe *tf)
      tf->trapno == T_IRQ0+IRQ_TIMER) {
     //cprintf("change\n");
     if(myproc()->is_stride == 1) mlfq_ticks--;
+    
+    //thread supported trapping
     if(local_ticks <= 0) {
-      prev_tgid |= myproc()->tgid;
       multithreading = 0;
       yield();
     } else {

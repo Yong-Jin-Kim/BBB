@@ -105,7 +105,6 @@ int             pipewrite(struct pipe*, char*, int);
 // proc.c
 extern volatile int num_stride; // 0 if no stride process, 1 if stride process
 extern volatile int total_share; // to make exception possible
-extern volatile uint prev_tgid; // in order for trap usage
 extern volatile int multithreading;
 int             cpuid(void);
 void            exit(void);
