@@ -89,7 +89,7 @@ racingthreadmain(void *arg)
   int tid = (int) arg;
   int i;
   int tmp;
-  //printf(1, "&&&&& %d\n", (uint)arg);
+  printf(1, "&&&&& %d\n", (uint)arg);
   for (i = 0; i < 10000000; i++){
     tmp = gcnt;
     tmp++;
@@ -119,7 +119,7 @@ racingtest(void)
       return -1;
     }
   }
-  //printf(1,"%d\n", gcnt);
+  printf(1,"%d\n", gcnt);
   return 0;
 }
 
@@ -222,13 +222,13 @@ stressthreadmain(void *arg)
 int
 stresstest(void)
 {
-  const int nstress = 35000;
+  const int nstress = 1000;
   thread_t threads[NUM_THREAD];
   int i, n;
   void *retval;
 
   for (n = 1; n <= nstress; n++){
-    if (n % 1000 == 0)
+    if (n % 100 == 0)
       printf(1, "%d\n", n);
     for (i = 0; i < NUM_THREAD; i++){
       if (thread_create(&threads[i], stressthreadmain, (void*)i) != 0){

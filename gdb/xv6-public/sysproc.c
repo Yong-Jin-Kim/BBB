@@ -77,6 +77,8 @@ sys_sleep(void)
       release(&tickslock);
       return -1;
     }
+    if(myproc()->is_thread == 1)
+      myproc()->parent->num_sleeping_thread++;
     sleep(&ticks, &tickslock);
   }
   release(&tickslock);

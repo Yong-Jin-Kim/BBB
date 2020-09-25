@@ -76,7 +76,7 @@ trap(struct trapframe *tf)
 	}
       }
       */
-      local_ticks--;
+      local_ticks--; // THE LOCAL TICK
       wakeup(&ticks);
       release(&tickslock);
     }

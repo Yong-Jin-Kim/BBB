@@ -61,6 +61,7 @@ struct proc {
   // Thread support
   int is_thread;
   int num_thread;
+  int num_sleeping_thread;
   void *retval;
   int old_sz;
   uint tgid; // thread group id, 0 if non thread related

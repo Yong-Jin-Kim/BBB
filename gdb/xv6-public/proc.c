@@ -25,7 +25,7 @@ static struct proc *initproc;
 
 int nextpid = 1;
 uint next_tgid = 1; // next thread group id, used for bitwise operations
-volatile int multithreading = 0;
+volatile int multithreading;
 
 extern void forkret(void);
 extern void trapret(void);
@@ -55,7 +55,8 @@ maxlev(void) {
   struct proc *p;
   int max = 0;
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-    if(p->state == RUNNABLE) {
+    if(p->is_thread == 1) continue;
+    if(p->state == RUNNABLE || (p->state == SLEEPING && p->num_thread > 0)) {
       if(p->mlfqlev > max) max = p->mlfqlev;
     }
   }
@@ -70,6 +71,7 @@ boost(void) {
     if(p->state == RUNNABLE ||
 	p->state == RUNNING ||
 	p->state == SLEEPING) {
+      if(p->is_thread == 1) continue;
       if(p->mlfqlev != -1) p->mlfqlev = 2;
       //p->allotment = 50000000; FOR MLFQ + STRIDE
       p->allotment = 20 * TICKSIZE;
@@ -233,6 +235,7 @@ found:
 
   p->is_thread = 0;
   p->num_thread = 0;
+  p->num_sleeping_thread = 0;
   p->tgid = 0;
   
   return p;
@@ -527,7 +530,8 @@ scheduler(void)
 	    if(num_stride > 0)
 	      while(ticks == empty_mlfq);
 	  }
-          continue;
+          if(p->num_thread <= 0)
+	    continue;
 	}
 
 	if(p->is_thread == 1)
@@ -537,7 +541,7 @@ scheduler(void)
 	  continue;
 
 	if(num_stride == 0) {
-	  switch(maxlev()) {
+	  switch(p->mlfqlev) {
 	    case 2:
 	      local_ticks = 5;
 	      break;
@@ -561,36 +565,54 @@ scheduler(void)
         // before jumping back to us.
         c->proc = p;
 	
-	if(p->is_thread == 1) cprintf("%d is a thread\n", p->pid);
 	switchuvm(p);
 	
-	switchuvm(p);
-	
+	// multithreading scheduler ///////
 	///////////////////////////////////
-	// switchuvm_t(p);
-	p->state = RUNNING;
-	swtch(&(c->scheduler), p->context);
+	if(p->num_thread > 0) {
+	  multithreading = 0;
+	  for(;;) {
+	    for(q = ptable.proc; q < &ptable.proc[NPROC]; q++) {
+	      if(p->num_thread == p->num_sleeping_thread) {
+		goto opt_out;
+	      }
+	      if(multithreading == 0) {
+		q = p->prev_thread + 1; // set first
+		multithreading = 1;
+	      }
+	      if((q->state != RUNNABLE) || (q >= &ptable.proc[NPROC]) || (q->tgid != p->tgid))
+		continue;
+	      c->proc = q;
+	      switchuvm_t(q);
+	      q->state = RUNNING;
+	      swtch(&(c->scheduler), q->context);
+	      if(multithreading == 0)
+		goto opt_out;
+	    }
+	  }
+opt_out:
+	  p->prev_thread = q;
+	  multithreading = 0;
+	} else {
+	  p->state = RUNNING;
+	  swtch(&(c->scheduler), p->context);
+	}
 	///////////////////////////////////
 
-	if(multithreading == 0) switchkvm();
+	switchkvm();
 
         stampout = stamp();
         procrun = (stampout - stampin)/2;
-	if(p->is_thread == 0) q = p;
-	else q = p->parent;
-	if(q->mlfqlev != 0) q->allotment -= procrun; // No need to deal with allotment in level 0
-	if(q->allotment < 0 && q->mlfqlev == 2) {
-	  q->mlfqlev = 1;
+	
+	if(p->mlfqlev != 0) p->allotment -= procrun; // No need to deal with allotment in level 0
+	if(p->allotment < 0 && p->mlfqlev == 2) {
+	  p->mlfqlev = 1;
 	  //p->allotment = 100000000; FOR MLFQ + STRIDE
-	  q->allotment = 40 * TICKSIZE;
-	  multithreading = 0;
-	  switchkvm();
+	  p->allotment = 40 * TICKSIZE;
         }
-        if(q->allotment < 0 && q->mlfqlev == 1) {
-	  q->mlfqlev = 0;
-	  q->allotment = 0; // An Infinity
-	  multithreading = 0;
-	  switchkvm();
+        if(p->allotment < 0 && p->mlfqlev == 1) {
+	  p->mlfqlev = 0;
+	  p->allotment = 0; // An Infinity
         }
 
         // ULTIMATE DEBUGGER
@@ -739,8 +761,12 @@ wakeup1(void *chan)
   struct proc *p;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
+    if(p->state == SLEEPING && p->chan == chan) {
       p->state = RUNNABLE;
+      if(p->is_thread == 1) {
+	p->parent->num_sleeping_thread--;
+      }
+    }
 }
 
 // Wake up all processes sleeping on chan.
@@ -798,9 +824,10 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
 
   // for mess cleanup
   if(curproc->num_thread == 0) {
+    curproc->prev_thread = np;
     curproc->old_sz = curproc->sz;
     curproc->tgid = next_tgid;
-    next_tgid = next_tgid << 1;
+    next_tgid++;
   }
 
   sz = curproc->sz;
@@ -838,15 +865,16 @@ thread_create(thread_t *thread, void *(*start_routine)(void *), void *arg)
   safestrcpy(np->name, curproc->name, sizeof(curproc->name));
 
   np->state = RUNNABLE;
+  
   np->is_thread = 1;
   np->is_stride = curproc->is_stride;
-  np->mlfqlev = curproc->mlfqlev;
-  np->share = curproc->share; 
-  np->tgid = curproc->tgid;
-
+  np->mlfqlev = -1;
+  
+  np->tgid = curproc->tgid; // put into same thread group
   *thread = np->pid;
   curproc->num_thread++;
 
+  //cprintf("created %d\n", curproc->num_thread);
   release(&ptable.lock);
 
   return 0;
@@ -862,6 +890,7 @@ thread_exit(void *retval)
   curproc->retval = retval;
   curproc->state = ZOMBIE;
   curproc->parent->state = RUNNABLE;
+  curproc->parent->num_thread--;
   
   if(!holding(&ptable.lock))
     panic("sched ptable.lock");
@@ -896,7 +925,6 @@ thread_join(thread_t thread, void **retval)
       p->name[0] = 0;
       p->killed = 0;
       p->state = UNUSED;
-      curproc->num_thread--;
       if(curproc->num_thread == 0) {
 	//cprintf("no more threads left\n");
 	if((sz = deallocuvm(curproc->pgdir, curproc->sz, curproc->old_sz)) == 0)
