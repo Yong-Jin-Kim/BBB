@@ -29,6 +29,10 @@ int yield(void);
 int procdump(void);
 int getlev(void);
 int set_cpu_share(int);
+int pread(int, void*, int, int);
+int pwrite(int, void*, int, int);
+int sync(void);
+int get_log_num(void);
 
 void print_order(int, int, int);
 
